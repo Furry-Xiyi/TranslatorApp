@@ -61,15 +61,19 @@ public sealed partial class MainWindow : Window
 
     private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
     {
+        if (_appWindow is null || CustomDragRegion is null) return;
         DispatcherQueue.TryEnqueue(UpdateDragRegionPadding);
     }
 
     private void UpdateDragRegionPadding()
     {
-        if (_appWindow is null) return;
+        if (_appWindow is null || CustomDragRegion is null) return;
         var tb = _appWindow.TitleBar;
-        // 避开系统按钮保留区
-        CustomDragRegion.Padding = new Thickness(tb.LeftInset, 0, tb.RightInset, 0);
+        if (tb != null)
+        {
+            // 避开系统按钮保留区
+            CustomDragRegion.Padding = new Thickness(tb.LeftInset, 0, tb.RightInset, 0);
+        }
     }
 
     private void TryLoadAppIcon()
