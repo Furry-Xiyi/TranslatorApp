@@ -2,43 +2,77 @@
     x:Class="TranslatorApp.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:TranslatorApp"
     xmlns:pages="using:TranslatorApp.Pages"
     xmlns:controls="using:Microsoft.UI.Xaml.Controls"
     Title="翻译">
 
-    <controls:NavigationView x:Name="NavView"
-                             PaneDisplayMode="Left"
-                             IsSettingsVisible="True"
-                             IsBackButtonVisible="Visible"
-                             BackRequested="NavView_BackRequested"
-                             SelectionChanged="NavView_SelectionChanged"
-                             Background="{ThemeResource ButtonBackground}">
+    <Grid>
+        <!-- 自定义标题栏区域 -->
+        <Grid x:Name="CustomDragRegion"
+              Height="48"
+              VerticalAlignment="Top"
+              Background="Transparent">
+            <!-- 三列布局：左-中-右。中间列承载需要“水平居中”的内容 -->
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-        <controls:NavigationView.MenuItems>
-            <controls:NavigationViewItem x:Name="Nav_Online"
-                                         Content="在线翻译"
-                                         Icon="Globe"
-                                         Tag="OnlineTranslatePage"/>
-            <controls:NavigationViewItem x:Name="Nav_Lookup"
-                                         Content="查词翻译"
-                                         Icon="Find"
-                                         Tag="WordLookupPage"/>
-            <controls:NavigationViewItem x:Name="Nav_Fav"
-                                         Content="收藏"
-                                         Icon="Favorite"
-                                         Tag="FavoritesPage"/>
-        </controls:NavigationView.MenuItems>
+            <!-- 左侧：应用图标 + 标题 -->
+            <StackPanel Grid.Column="0"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                        Margin="12,0,0,0">
+                <Image x:Name="AppIconImage" Width="20" Height="20" Stretch="Uniform"/>
+                <TextBlock Text="翻译" FontSize="16" VerticalAlignment="Center"/>
+            </StackPanel>
 
-        <Frame x:Name="ContentFrame">
-            <Frame.KeyboardAccelerators>
-                <!-- Alt+← 返回，Alt+→ 前进（WinUI 用 Menu 表示 Alt） -->
-                <KeyboardAccelerator Key="Left"
-                                      Modifiers="Menu"
-                                      Invoked="BackAccelerator_Invoked"/>
-                <KeyboardAccelerator Key="Right"
-                                      Modifiers="Menu"
-                                      Invoked="ForwardAccelerator_Invoked"/>
-            </Frame.KeyboardAccelerators>
-        </Frame>
-    </controls:NavigationView>
+            <!-- 中间：供页面注入的“居中容器” -->
+            <Grid x:Name="TitleBarCenterHost"
+                  Grid.Column="1"
+                  VerticalAlignment="Center"
+                  HorizontalAlignment="Stretch"/>
+
+            <!-- 右侧：预留（可放按钮等） -->
+            <StackPanel Grid.Column="2"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                        Margin="0,0,12,0"/>
+        </Grid>
+
+        <!-- 主内容区（标题栏高度 48） -->
+        <Grid Margin="0,48,0,0">
+            <controls:NavigationView x:Name="NavView"
+                                     PaneDisplayMode="Left"
+                                     IsSettingsVisible="True"
+                                     IsBackButtonVisible="Visible"
+                                     BackRequested="NavView_BackRequested"
+                                     SelectionChanged="NavView_SelectionChanged">
+                <controls:NavigationView.Resources>
+                    <SolidColorBrush x:Key="TabViewButtonBackground" Color="Transparent"/>
+                </controls:NavigationView.Resources>
+
+                <controls:NavigationView.MenuItems>
+                    <controls:NavigationViewItem x:Name="Nav_Online"
+                                                 Content="在线翻译"
+                                                 Icon="Globe"
+                                                 Tag="OnlineTranslatePage"/>
+                    <controls:NavigationViewItem x:Name="Nav_Lookup"
+                                                 Content="查词翻译"
+                                                 Icon="Find"
+                                                 Tag="WordLookupPage"/>
+                    <controls:NavigationViewItem x:Name="Nav_Fav"
+                                                 Content="收藏"
+                                                 Icon="Favorite"
+                                                 Tag="FavoritesPage"/>
+                </controls:NavigationView.MenuItems>
+
+                <Frame x:Name="ContentFrame"/>
+            </controls:NavigationView>
+        </Grid>
+    </Grid>
 </Window>

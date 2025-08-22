@@ -59,6 +59,13 @@ namespace TranslatorApp.Services
             set => Local.Values[nameof(LastLookupSite)] = value;
         }
 
+        // 新增：最近使用的翻译 API
+        public static string LastUsedApi
+        {
+            get => (string?)Local.Values[nameof(LastUsedApi)] ?? string.Empty;
+            set => Local.Values[nameof(LastUsedApi)] = value;
+        }
+
         // 是否已配置任意一个 API
         public static bool HasAnyApiKey() =>
             !string.IsNullOrWhiteSpace(BingSecret) ||

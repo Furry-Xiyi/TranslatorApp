@@ -1,6 +1,7 @@
 ﻿using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Data;
 using System;
 using System.Linq;
 using System.Threading;
@@ -38,11 +39,12 @@ namespace TranslatorApp.Pages
             _infoTimer.Interval = TimeSpan.FromSeconds(2);
             _infoTimer.Tick += (_, __) =>
             {
-                CopyInfoBar.IsOpen = false;
+                ToastPanel.Opacity = 0;
                 _infoTimer?.Stop();
             };
 
-            UpdateBindings();
+            LoadLanguageOptions();
+            LoadApiOptions();
         }
 
         private void OnlineTranslatePage_Unloaded(object sender, RoutedEventArgs e)
@@ -55,50 +57,95 @@ namespace TranslatorApp.Pages
             _cts = null;
         }
 
-        private void UpdateBindings() => Bindings.Update();
-
-        private void BtnSwap_Click(object sender, RoutedEventArgs e)
+        private void LoadLanguageOptions()
         {
-            var inItem = CbInputLang.SelectedItem as ComboBoxItem;
-            var outItem = CbOutputLang.SelectedItem as ComboBoxItem;
-
-            if (inItem is null || outItem is null) return;
-
-            if ((inItem.Tag?.ToString() ?? "auto") != "auto")
+            string[] langs = { "自动检测", "中文", "英文", "日文", "韩文" };
+            foreach (var lang in langs)
             {
-                var inIndex = CbInputLang.SelectedIndex;
-                var outIndex = CbOutputLang.SelectedIndex;
-                CbInputLang.SelectedIndex = outIndex;
-                CbOutputLang.SelectedIndex = inIndex;
+                CbFromLang.Items.Add(new ComboBoxItem { Content = lang, Tag = GetLangTag(lang) });
+                CbToLang.Items.Add(new ComboBoxItem { Content = lang, Tag = GetLangTag(lang) });
             }
+            CbFromLang.SelectedIndex = 0;
+            CbToLang.SelectedIndex = 1;
         }
 
-        private void TbInput_TextChanging(TextBox sender, TextBoxTextChangingEventArgs args) => UpdateBindings();
-
-        private void ShowCopyInfo()
+        private string GetLangTag(string lang) => lang switch
         {
-            CopyInfoBar.IsOpen = true;
+            "自动检测" => "auto",
+            "中文" => "zh",
+            "英文" => "en",
+            "日文" => "ja",
+            "韩文" => "ko",
+            _ => "auto"
+        };
+
+        private void LoadApiOptions()
+        {
+            CbApi.Items.Add(new ComboBoxItem { Content = "Bing", Tag = "Bing" });
+            CbApi.Items.Add(new ComboBoxItem { Content = "百度", Tag = "Baidu" });
+            CbApi.Items.Add(new ComboBoxItem { Content = "有道", Tag = "Youdao" });
+
+            var lastApi = SettingsService.LastUsedApi;
+            if (!string.IsNullOrEmpty(lastApi))
+            {
+                foreach (ComboBoxItem item in CbApi.Items)
+                {
+                    if ((item.Tag?.ToString() ?? "") == lastApi)
+                    {
+                        CbApi.SelectedItem = item;
+                        break;
+                    }
+                }
+            }
+            if (CbApi.SelectedItem == null)
+                CbApi.SelectedIndex = 0;
+
+            CbApi.SelectionChanged += (s, e) =>
+            {
+                SettingsService.LastUsedApi = (CbApi.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+            };
+        }
+
+        private void BtnSwapLang_Click(object sender, RoutedEventArgs e)
+        {
+            // 无条件交换
+            var inIndex = CbFromLang.SelectedIndex;
+            var outIndex = CbToLang.SelectedIndex;
+            CbFromLang.SelectedIndex = outIndex;
+            CbToLang.SelectedIndex = inIndex;
+        }
+
+        private void TbInput_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            // 输入变化时同步到输出框
+            TbOutput.Text = TbInput.Text;
+        }
+
+        private void ShowToast(string message)
+        {
+            ToastText.Text = message;
+            ToastPanel.Opacity = 1;
             _infoTimer?.Stop();
             _infoTimer?.Start();
         }
 
-        private void CopyInput_Click(object sender, RoutedEventArgs e)
+        private void BtnCopyInput_Click(object sender, RoutedEventArgs e)
         {
             var dp = new DataPackage();
             dp.SetText(TbInput.Text ?? string.Empty);
             Clipboard.SetContent(dp);
-            ShowCopyInfo();
+            ShowToast("已复制输入文本");
         }
 
-        private void CopyOutput_Click(object sender, RoutedEventArgs e)
+        private void BtnCopyOutput_Click(object sender, RoutedEventArgs e)
         {
             var dp = new DataPackage();
             dp.SetText(TbOutput.Text ?? string.Empty);
             Clipboard.SetContent(dp);
-            ShowCopyInfo();
+            ShowToast("已复制翻译结果");
         }
 
-        private async void SpeakOutput_Click(object sender, RoutedEventArgs e)
+        private async void BtnSpeakOutput_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrWhiteSpace(TbOutput.Text) || _synth is null || _player is null) return;
             try
@@ -112,11 +159,12 @@ namespace TranslatorApp.Pages
             }
         }
 
-        private void FavOutput_Click(object sender, RoutedEventArgs e)
+        private void BtnFavOutput_Click(object sender, RoutedEventArgs e)
         {
             if (!string.IsNullOrWhiteSpace(TbOutput.Text))
             {
                 FavoritesService.Add(TbOutput.Text.Trim());
+                ShowToast("已添加到收藏");
             }
         }
 
@@ -127,7 +175,6 @@ namespace TranslatorApp.Pages
 
             var api = (CbApi.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Bing";
 
-            // 检查对应 API 是否已填写
             bool hasKey = api switch
             {
                 "Bing" => !string.IsNullOrWhiteSpace(SettingsService.BingApiKey),
@@ -157,20 +204,16 @@ namespace TranslatorApp.Pages
                 return;
             }
 
-            // 读取参数
-            var sourceLang = ((CbInputLang.SelectedItem as ComboBoxItem)?.Tag?.ToString()) ?? "auto";
-            var targetLang = ((CbOutputLang.SelectedItem as ComboBoxItem)?.Tag?.ToString()) ?? "zh";
+            var sourceLang = ((CbFromLang.SelectedItem as ComboBoxItem)?.Tag?.ToString()) ?? "auto";
+            var targetLang = ((CbToLang.SelectedItem as ComboBoxItem)?.Tag?.ToString()) ?? "zh";
             var text = TbInput.Text?.Trim() ?? string.Empty;
 
-            // 若目标语言与源语言相同，且非自动检测，直接回显
             if (!string.IsNullOrEmpty(text) && sourceLang != "auto" && sourceLang == targetLang)
             {
                 TbOutput.Text = text;
-                UpdateBindings();
                 return;
             }
 
-            // 准备调用
             SetBusy(true, api);
 
             _cts?.Cancel();
@@ -187,11 +230,9 @@ namespace TranslatorApp.Pages
                     cancellationToken: _cts.Token);
 
                 TbOutput.Text = result;
-                UpdateBindings();
             }
             catch (OperationCanceledException)
             {
-                // 用户中断，无需提示
             }
             catch (Exception ex)
             {
@@ -222,8 +263,8 @@ namespace TranslatorApp.Pages
         {
             BtnTranslate.IsEnabled = !isBusy;
             CbApi.IsEnabled = !isBusy;
-            CbInputLang.IsEnabled = !isBusy;
-            CbOutputLang.IsEnabled = !isBusy;
+            CbFromLang.IsEnabled = !isBusy;
+            CbToLang.IsEnabled = !isBusy;
             TbInput.IsEnabled = !isBusy;
 
             BtnTranslate.Content = isBusy ? $"翻译中…（{apiLabel}）" : "翻译";

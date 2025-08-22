@@ -6,7 +6,7 @@
     <Grid>
 
         <ScrollViewer>
-            <StackPanel Spacing="20" Padding="20" HorizontalAlignment="Left" Width="500">
+            <StackPanel Spacing="20" Padding="20" HorizontalAlignment="Stretch">
 
                 <!-- 外观组 -->
                 <TextBlock Text="外观" FontSize="20" FontWeight="Bold" Margin="0,0,0,8"/>
@@ -21,7 +21,8 @@
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
-                    <RadioButtons x:Name="RbTheme" SelectionChanged="RbTheme_SelectionChanged">
+                    <RadioButtons x:Name="RbTheme" SelectionChanged="RbTheme_SelectionChanged"
+                                  HorizontalContentAlignment="Left">
                         <RadioButton Content="跟随系统" />
                         <RadioButton Content="浅色" />
                         <RadioButton Content="深色" />
@@ -38,7 +39,8 @@
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
-                    <RadioButtons x:Name="RbBackdrop" SelectionChanged="RbBackdrop_SelectionChanged">
+                    <RadioButtons x:Name="RbBackdrop" SelectionChanged="RbBackdrop_SelectionChanged"
+                                  HorizontalContentAlignment="Left">
                         <RadioButton Content="不透明" Tag="None"/>
                         <RadioButton Content="云母" Tag="Mica"/>
                         <RadioButton Content="云母ALT" Tag="MicaAlt"/>
@@ -59,9 +61,11 @@
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
-                    <StackPanel Spacing="8">
-                        <TextBox x:Name="TbBingAppId" PlaceholderText="Bing AppId" />
-                        <TextBox x:Name="TbBingSecret" PlaceholderText="Bing SecretKey" />
+                    <StackPanel Spacing="8" HorizontalAlignment="Left">
+                        <TextBox x:Name="TbBingAppId" PlaceholderText="Bing AppId"
+                                 MinWidth="300" HorizontalAlignment="Stretch"/>
+                        <TextBox x:Name="TbBingSecret" PlaceholderText="Bing SecretKey"
+                                 MinWidth="300" HorizontalAlignment="Stretch"/>
                         <Button Content="保存" Click="SaveBing_Click"/>
                     </StackPanel>
                 </Expander>
@@ -76,9 +80,11 @@
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
-                    <StackPanel Spacing="8">
-                        <TextBox x:Name="TbBaiduAppId" PlaceholderText="Baidu AppId" />
-                        <TextBox x:Name="TbBaiduSecret" PlaceholderText="Baidu SecretKey" />
+                    <StackPanel Spacing="8" HorizontalAlignment="Left">
+                        <TextBox x:Name="TbBaiduAppId" PlaceholderText="Baidu AppId"
+                                 MinWidth="300" HorizontalAlignment="Stretch"/>
+                        <TextBox x:Name="TbBaiduSecret" PlaceholderText="Baidu SecretKey"
+                                 MinWidth="300" HorizontalAlignment="Stretch"/>
                         <Button Content="保存" Click="SaveBaidu_Click"/>
                     </StackPanel>
                 </Expander>
@@ -93,9 +99,11 @@
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
-                    <StackPanel Spacing="8">
-                        <TextBox x:Name="TbYoudaoAppKey" PlaceholderText="Youdao AppKey" />
-                        <TextBox x:Name="TbYoudaoSecret" PlaceholderText="Youdao SecretKey" />
+                    <StackPanel Spacing="8" HorizontalAlignment="Left">
+                        <TextBox x:Name="TbYoudaoAppKey" PlaceholderText="Youdao AppKey"
+                                 MinWidth="300" HorizontalAlignment="Stretch"/>
+                        <TextBox x:Name="TbYoudaoSecret" PlaceholderText="Youdao SecretKey"
+                                 MinWidth="300" HorizontalAlignment="Stretch"/>
                         <Button Content="保存" Click="SaveYoudao_Click"/>
                     </StackPanel>
                 </Expander>
@@ -106,7 +114,8 @@
                 <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="12">
-                            <Image Source="ms-appx:///Assets/AppIcon.png" Width="48" Height="48"/>
+                            <!-- 缩小后的应用图标 -->
+                            <Image x:Name="ImgAppIcon" Width="20" Height="20" Stretch="UniformToFill"/>
                             <StackPanel>
                                 <TextBlock x:Name="TxtAppName" FontSize="18" FontWeight="Bold"/>
                                 <TextBlock Text="©2025 Furry Xiyi。保留所有权利。" FontSize="12"/>
@@ -114,13 +123,13 @@
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
-                    <StackPanel Margin="0,8,0,0" Spacing="6">
-                        <HyperlinkButton Content="加入QQ群聊"/>
-                        <HyperlinkButton Content="加入Discord群组"/>
+                    <StackPanel Margin="0,8,0,0" Spacing="6" HorizontalAlignment="Left">
+                        <HyperlinkButton Content="加入QQ群聊" NavigateUri="https://qm.qq.com/q/oBmbTWuE5q"/>
+                        <HyperlinkButton Content="加入Discord群组" NavigateUri="https://discord.gg/BRYYppY2"/>
                     </StackPanel>
                 </Expander>
 
-                <HyperlinkButton Content="发送反馈" Margin="0,20,0,0"/>
+                <HyperlinkButton Content="发送反馈" NavigateUri="https://github.com/Furry-Xiyi/TranslatorApp/issues" Margin="0,20,0,0" HorizontalAlignment="Left"/>
 
             </StackPanel>
         </ScrollViewer>

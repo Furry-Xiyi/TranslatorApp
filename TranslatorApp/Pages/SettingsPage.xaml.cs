@@ -2,6 +2,7 @@ using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Threading.Tasks;
 using TranslatorApp.Services;
@@ -12,10 +13,14 @@ namespace TranslatorApp.Pages
 {
     public sealed partial class SettingsPage : Page
     {
+        private bool _isInitializing = true; // 初始化标志
+        private string? _lastBackdropTag;    // 记录上一次背景材质
+
         public SettingsPage()
         {
             InitializeComponent();
             LoadSettings();
+            _isInitializing = false; // 初始化完成
         }
 
         private void LoadSettings()
@@ -31,6 +36,7 @@ namespace TranslatorApp.Pages
 
             // 背景材质
             var backdropValue = ApplicationData.Current.LocalSettings.Values["BackdropMaterial"] as string ?? "Mica";
+            _lastBackdropTag = backdropValue;
             RbBackdrop.SelectedIndex = backdropValue switch
             {
                 "None" => 0,
@@ -53,20 +59,23 @@ namespace TranslatorApp.Pages
             {
                 TxtAppName.Text = Package.Current.DisplayName;
                 var v = Package.Current.Id.Version;
-                TxtVersion.Text = $"版本号: {v.Major}.{v.Minor}.{v.Build}.{v.Revision}";
+                TxtVersion.Text = $"{v.Major}.{v.Minor}.{v.Build}.{v.Revision}";
+
+                // 自动读取应用图标
+                var logoUri = Package.Current.Logo;
+                ImgAppIcon.Source = new BitmapImage(logoUri);
             }
             catch
             {
                 TxtAppName.Text = "未知";
                 TxtVersion.Text = "版本号: 获取失败";
             }
-
-            // 启动时应用一次背景材质，确保与设置一致
-            ApplyBackdropToWindow(backdropValue);
         }
 
         private void RbTheme_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (_isInitializing) return;
+
             var theme = RbTheme.SelectedIndex switch
             {
                 1 => ElementTheme.Light,
@@ -74,10 +83,9 @@ namespace TranslatorApp.Pages
                 _ => ElementTheme.Default
             };
 
-            // 即时保存
             ApplicationData.Current.LocalSettings.Values["AppTheme"] = theme.ToString();
 
-            if (App.MainAppWindow?.Content is FrameworkElement fe)
+            if (App.MainWindow?.Content is FrameworkElement fe)
             {
                 fe.RequestedTheme = theme;
             }
@@ -85,54 +93,32 @@ namespace TranslatorApp.Pages
 
         private void RbBackdrop_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (_isInitializing) return;
+
             var tag = (RbBackdrop.SelectedItem as RadioButton)?.Tag?.ToString() ?? "Mica";
+
+            // 如果值没变，直接返回，避免闪烁
+            if (tag == _lastBackdropTag) return;
+            _lastBackdropTag = tag;
+
             ApplicationData.Current.LocalSettings.Values["BackdropMaterial"] = tag;
 
-            ApplyBackdropToWindow(tag);
-        }
-
-        private static void ApplyBackdropToWindow(string tag)
-        {
-            if (App.MainAppWindow is null) return;
-
-            try
+            if (App.MainWindow is not null)
             {
-                switch (tag)
+                try
                 {
-                    case "None":
-                        App.MainAppWindow.SystemBackdrop = null;
-                        break;
-
-                    case "Acrylic":
-                        App.MainAppWindow.SystemBackdrop = new DesktopAcrylicBackdrop();
-                        break;
-
-                    case "MicaAlt":
-                        {
-                            // 以字符串解析的方式尝试使用 Alternative/Alt，避免编译期依赖具体枚举成员
-                            var mica = new MicaBackdrop();
-                            if (Enum.TryParse<MicaKind>("Alternative", out var altKind))
-                            {
-                                mica.Kind = altKind;
-                            }
-                            else if (Enum.TryParse<MicaKind>("Alt", out var altKindLegacy))
-                            {
-                                mica.Kind = altKindLegacy;
-                            }
-                            App.MainAppWindow.SystemBackdrop = mica;
-                            break;
-                        }
-
-                    default:
-                        // 默认 Mica（Base）
-                        App.MainAppWindow.SystemBackdrop = new MicaBackdrop();
-                        break;
+                    App.MainWindow.SystemBackdrop = tag switch
+                    {
+                        "None" => null,
+                        "MicaAlt" => new MicaBackdrop { Kind = MicaKind.BaseAlt },
+                        "Acrylic" => new DesktopAcrylicBackdrop(),
+                        _ => new MicaBackdrop { Kind = MicaKind.Base }
+                    };
                 }
-            }
-            catch
-            {
-                // 某些设备/系统版本不支持时，回退为无材质
-                App.MainAppWindow.SystemBackdrop = null;
+                catch
+                {
+                    App.MainWindow.SystemBackdrop = null;
+                }
             }
         }
 
@@ -159,17 +145,15 @@ namespace TranslatorApp.Pages
 
         private async Task SaveApiKeyAsync(string apiName, string key1, string key2 = "")
         {
-            // 显示全局加载动画
             LoadingOverlay.Visibility = Visibility.Visible;
             LoadingRing.IsActive = true;
 
-            // 保存到 SettingsService
             switch (apiName)
             {
                 case "Bing":
                     SettingsService.BingAppId = key1;
                     SettingsService.BingSecret = key2;
-                    SettingsService.BingApiKey = key2; // 兼容旧逻辑
+                    SettingsService.BingApiKey = key2;
                     break;
                 case "Baidu":
                     SettingsService.BaiduAppId = key1;
@@ -191,7 +175,6 @@ namespace TranslatorApp.Pages
                 verifyResult = string.Empty;
             }
 
-            // 隐藏加载动画
             LoadingOverlay.Visibility = Visibility.Collapsed;
             LoadingRing.IsActive = false;
 
