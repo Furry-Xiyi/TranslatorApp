@@ -1,0 +1,38 @@
+<Window
+    x:Class="TranslatorApp.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:pages="using:TranslatorApp.Pages"
+    Title="翻译">
+
+    <NavigationView x:Name="NavView"
+                    PaneDisplayMode="Left"
+                    IsSettingsVisible="True"
+                    IsBackButtonVisible="Visible"
+                    BackRequested="NavView_BackRequested"
+                    SelectionChanged="NavView_SelectionChanged">
+
+        <NavigationView.MenuItems>
+            <NavigationViewItem x:Name="Nav_Online"
+                                Content="在线翻译"
+                                Icon="Globe"
+                                Tag="OnlineTranslatePage"/>
+            <NavigationViewItem x:Name="Nav_Lookup"
+                                Content="查词翻译"
+                                Icon="Find"
+                                Tag="WordLookupPage"/>
+            <NavigationViewItem x:Name="Nav_Fav"
+                                Content="收藏"
+                                Icon="Favorite"
+                                Tag="FavoritesPage"/>
+        </NavigationView.MenuItems>
+
+        <Frame x:Name="ContentFrame">
+            <Frame.KeyboardAccelerators>
+                <!-- Alt+← 返回，Alt+→ 前进（WinUI 用 Menu 表示 Alt） -->
+                <KeyboardAccelerator Key="Left" Modifiers="Menu" Invoked="BackAccelerator_Invoked"/>
+                <KeyboardAccelerator Key="Right" Modifiers="Menu" Invoked="ForwardAccelerator_Invoked"/>
+            </Frame.KeyboardAccelerators>
+        </Frame>
+    </NavigationView>
+</Window>

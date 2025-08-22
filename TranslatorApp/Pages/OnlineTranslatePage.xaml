@@ -1,0 +1,130 @@
+<Page
+    x:Class="TranslatorApp.Pages.OnlineTranslatePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="16" x:Name="RootGrid">
+
+        <!-- 顶部语言选择 -->
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <ComboBox x:Name="CbInputLang" Width="180" Header="输入语言" PlaceholderText="自动检测">
+                <ComboBoxItem Content="自动检测" Tag="auto" IsSelected="True" />
+                <ComboBoxItem Content="中文" Tag="zh" />
+                <ComboBoxItem Content="英文" Tag="en" />
+                <ComboBoxItem Content="日文" Tag="ja" />
+                <ComboBoxItem Content="韩文" Tag="ko" />
+            </ComboBox>
+
+            <Button x:Name="BtnSwap" Content="⇄" Width="40" Height="40"
+                    ToolTipService.ToolTip="互换" Click="BtnSwap_Click"/>
+
+            <ComboBox x:Name="CbOutputLang" Width="180" Header="输出语言" PlaceholderText="选择语言">
+                <ComboBoxItem Content="中文" Tag="zh" IsSelected="True" />
+                <ComboBoxItem Content="英文" Tag="en" />
+                <ComboBoxItem Content="日文" Tag="ja" />
+                <ComboBoxItem Content="韩文" Tag="ko" />
+            </ComboBox>
+        </StackPanel>
+
+        <!-- 中部左右对称文本框 -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,16,*">
+            <!-- 输入 -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="输入文本" Margin="0,0,0,8" />
+                <Grid>
+                    <TextBox x:Name="TbInput"
+                             TextChanging="TbInput_TextChanging"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             PlaceholderText="在此输入待翻译文本..."
+                             MinHeight="220"
+                             Padding="12,40,12,12" />
+
+                    <!-- 顶部按钮条 -->
+                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0">
+                        <Button Content="复制" Click="CopyInput_Click" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <!-- 间隔 -->
+            <Grid Grid.Column="1"/>
+
+            <!-- 输出 -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="输出文本" Margin="0,0,0,8" />
+                <Grid>
+                    <TextBox x:Name="TbOutput"
+                             IsReadOnly="True"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             PlaceholderText="翻译结果将显示在这里"
+                             MinHeight="220"
+                             Padding="12,40,12,12"
+                             IsEnabled="{x:Bind HasOutput, Mode=OneWay}"/>
+
+                    <!-- 顶部按钮条 -->
+                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0">
+                        <Button Content="复制" Click="CopyOutput_Click"/>
+                        <Button Content="朗读" Click="SpeakOutput_Click"/>
+                        <Button Content="收藏" Click="FavOutput_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- 底部：API 下拉 + 翻译按钮 -->
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,8,Auto,*,Auto" VerticalAlignment="Center">
+            <ComboBox x:Name="CbApi"
+                      Header="翻译 API"
+                      Width="220"
+                      SelectedIndex="0">
+                <ComboBoxItem Content="Bing" Tag="Bing"/>
+                <ComboBoxItem Content="百度" Tag="Baidu"/>
+                <ComboBoxItem Content="有道" Tag="Youdao"/>
+            </ComboBox>
+
+            <TextBlock Grid.Column="2" VerticalAlignment="Center" Opacity="0.6"
+                       Text="未填写的 API 会提示跳转到设置页" />
+
+            <Button Grid.Column="4" x:Name="BtnTranslate" Content="翻译"
+                    Click="BtnTranslate_Click"
+                    IsEnabled="{x:Bind CanTranslate, Mode=OneWay}"
+                    HorizontalAlignment="Right"
+                    MinWidth="96"/>
+        </Grid>
+
+        <!-- 顶部滑出提示 -->
+        <InfoBar x:Name="CopyInfoBar"
+                 IsOpen="False"
+                 Title="已复制到剪贴板"
+                 Severity="Success"
+                 Margin="0,-8,0,0"
+                 HorizontalAlignment="Stretch"
+                 VerticalAlignment="Top"
+                 Grid.RowSpan="3"/>
+
+        <!-- 隐藏的播放器 -->
+        <MediaPlayerElement x:Name="Player"
+                            AreTransportControlsEnabled="False"
+                            AutoPlay="True"
+                            Height="0" />
+    </Grid>
+</Page>
