@@ -100,13 +100,31 @@ public sealed partial class MainWindow : Window
         return false;
     }
 
+    private async Task EnsureXamlRootAsync()
+    {
+        // 如果 NavView 的 XamlRoot 还没建立，等待它 Loaded
+        if (NavView.XamlRoot != null) return;
+
+        var tcs = new TaskCompletionSource<object?>();
+        RoutedEventHandler? handler = null;
+        handler = (s, e) =>
+        {
+            NavView.Loaded -= handler;
+            tcs.TrySetResult(null);
+        };
+        NavView.Loaded += handler;
+
+        await tcs.Task;
+    }
+
     private async Task ShowWelcomeDialogAsync()
     {
-        var root = (FrameworkElement)Content;
+        // 确保有可用的 XamlRoot
+        await EnsureXamlRootAsync();
 
         var dialog = new ContentDialog
         {
-            XamlRoot = root.XamlRoot,
+            XamlRoot = NavView.XamlRoot, // 已保证不为 null
             Title = "欢迎使用翻译",
             PrimaryButtonText = "去填写",
             CloseButtonText = "稍后",

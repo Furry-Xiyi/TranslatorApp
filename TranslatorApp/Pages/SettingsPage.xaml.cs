@@ -1,9 +1,12 @@
+using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using System;
 using System.Threading.Tasks;
 using TranslatorApp.Services;
 using Windows.ApplicationModel;
+using Windows.Storage;
 
 namespace TranslatorApp.Pages
 {
@@ -18,103 +21,163 @@ namespace TranslatorApp.Pages
         private void LoadSettings()
         {
             // 主题
-            RbTheme.SelectedIndex = SettingsService.AppTheme switch
+            var themeValue = ApplicationData.Current.LocalSettings.Values["AppTheme"] as string ?? "Default";
+            RbTheme.SelectedIndex = themeValue switch
             {
-                ElementTheme.Light => 1,
-                ElementTheme.Dark => 2,
+                "Light" => 1,
+                "Dark" => 2,
                 _ => 0
             };
 
-            // 背景
-            foreach (ComboBoxItem item in CbBackdrop.Items)
+            // 背景材质
+            var backdropValue = ApplicationData.Current.LocalSettings.Values["BackdropMaterial"] as string ?? "Mica";
+            RbBackdrop.SelectedIndex = backdropValue switch
             {
-                if ((item.Tag?.ToString() ?? "Mica") == SettingsService.Backdrop)
-                {
-                    CbBackdrop.SelectedItem = item;
-                    break;
-                }
-            }
+                "None" => 0,
+                "Mica" => 1,
+                "MicaAlt" => 2,
+                "Acrylic" => 3,
+                _ => 1
+            };
 
-            // API Keys（合并存储）
-            TbBing.Text = SettingsService.BingApiKey;
-            TbBaidu.Text = SettingsService.BaiduApiKey;   // 格式：AppId|SecretKey
-            TbYoudao.Text = SettingsService.YoudaoApiKey; // 格式：AppKey|SecretKey
+            // API Keys
+            TbBingAppId.Text = SettingsService.BingAppId;
+            TbBingSecret.Text = SettingsService.BingSecret;
+            TbBaiduAppId.Text = SettingsService.BaiduAppId;
+            TbBaiduSecret.Text = SettingsService.BaiduSecret;
+            TbYoudaoAppKey.Text = SettingsService.YoudaoAppKey;
+            TbYoudaoSecret.Text = SettingsService.YoudaoSecret;
 
             // 应用信息
             try
             {
                 TxtAppName.Text = Package.Current.DisplayName;
                 var v = Package.Current.Id.Version;
-                TxtVersion.Text = $"版本号：{v.Major}.{v.Minor}.{v.Build}.{v.Revision}";
+                TxtVersion.Text = $"版本号: {v.Major}.{v.Minor}.{v.Build}.{v.Revision}";
             }
             catch
             {
                 TxtAppName.Text = "未知";
-                TxtVersion.Text = "版本号：未能获取";
+                TxtVersion.Text = "版本号: 获取失败";
             }
+
+            // 启动时应用一次背景材质，确保与设置一致
+            ApplyBackdropToWindow(backdropValue);
         }
 
         private void RbTheme_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            SettingsService.AppTheme = RbTheme.SelectedIndex switch
+            var theme = RbTheme.SelectedIndex switch
             {
                 1 => ElementTheme.Light,
                 2 => ElementTheme.Dark,
                 _ => ElementTheme.Default
             };
 
+            // 即时保存
+            ApplicationData.Current.LocalSettings.Values["AppTheme"] = theme.ToString();
+
             if (App.MainAppWindow?.Content is FrameworkElement fe)
             {
-                fe.RequestedTheme = SettingsService.AppTheme;
+                fe.RequestedTheme = theme;
             }
         }
 
-        private void CbBackdrop_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void RbBackdrop_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (CbBackdrop.SelectedItem is ComboBoxItem item)
+            var tag = (RbBackdrop.SelectedItem as RadioButton)?.Tag?.ToString() ?? "Mica";
+            ApplicationData.Current.LocalSettings.Values["BackdropMaterial"] = tag;
+
+            ApplyBackdropToWindow(tag);
+        }
+
+        private static void ApplyBackdropToWindow(string tag)
+        {
+            if (App.MainAppWindow is null) return;
+
+            try
             {
-                SettingsService.Backdrop = item.Tag?.ToString() ?? "Mica";
-                if (App.MainAppWindow is not null)
+                switch (tag)
                 {
-                    ThemeAndBackdropService.ApplyBackdropFromSettings(App.MainAppWindow);
+                    case "None":
+                        App.MainAppWindow.SystemBackdrop = null;
+                        break;
+
+                    case "Acrylic":
+                        App.MainAppWindow.SystemBackdrop = new DesktopAcrylicBackdrop();
+                        break;
+
+                    case "MicaAlt":
+                        {
+                            // 以字符串解析的方式尝试使用 Alternative/Alt，避免编译期依赖具体枚举成员
+                            var mica = new MicaBackdrop();
+                            if (Enum.TryParse<MicaKind>("Alternative", out var altKind))
+                            {
+                                mica.Kind = altKind;
+                            }
+                            else if (Enum.TryParse<MicaKind>("Alt", out var altKindLegacy))
+                            {
+                                mica.Kind = altKindLegacy;
+                            }
+                            App.MainAppWindow.SystemBackdrop = mica;
+                            break;
+                        }
+
+                    default:
+                        // 默认 Mica（Base）
+                        App.MainAppWindow.SystemBackdrop = new MicaBackdrop();
+                        break;
                 }
             }
+            catch
+            {
+                // 某些设备/系统版本不支持时，回退为无材质
+                App.MainAppWindow.SystemBackdrop = null;
+            }
         }
 
-        // 保存 Bing API
         private async void SaveBing_Click(object sender, RoutedEventArgs e)
         {
-            await SaveApiKeyAsync("Bing", TbBing.Text?.Trim() ?? string.Empty);
+            await SaveApiKeyAsync("Bing",
+                TbBingAppId.Text?.Trim() ?? string.Empty,
+                TbBingSecret.Text?.Trim() ?? string.Empty);
         }
 
-        // 保存 Baidu API（合并存储）
         private async void SaveBaidu_Click(object sender, RoutedEventArgs e)
         {
-            await SaveApiKeyAsync("Baidu", TbBaidu.Text?.Trim() ?? string.Empty);
+            await SaveApiKeyAsync("Baidu",
+                TbBaiduAppId.Text?.Trim() ?? string.Empty,
+                TbBaiduSecret.Text?.Trim() ?? string.Empty);
         }
 
-        // 保存 Youdao API（合并存储）
         private async void SaveYoudao_Click(object sender, RoutedEventArgs e)
         {
-            await SaveApiKeyAsync("Youdao", TbYoudao.Text?.Trim() ?? string.Empty);
+            await SaveApiKeyAsync("Youdao",
+                TbYoudaoAppKey.Text?.Trim() ?? string.Empty,
+                TbYoudaoSecret.Text?.Trim() ?? string.Empty);
         }
 
-        private async Task SaveApiKeyAsync(string apiName, string key)
+        private async Task SaveApiKeyAsync(string apiName, string key1, string key2 = "")
         {
+            // 显示全局加载动画
             LoadingOverlay.Visibility = Visibility.Visible;
             LoadingRing.IsActive = true;
 
-            // 临时保存到 SettingsService 以便验证
+            // 保存到 SettingsService
             switch (apiName)
             {
                 case "Bing":
-                    SettingsService.BingApiKey = key;
+                    SettingsService.BingAppId = key1;
+                    SettingsService.BingSecret = key2;
+                    SettingsService.BingApiKey = key2; // 兼容旧逻辑
                     break;
                 case "Baidu":
-                    SettingsService.BaiduApiKey = key; // 格式：AppId|SecretKey
+                    SettingsService.BaiduAppId = key1;
+                    SettingsService.BaiduSecret = key2;
                     break;
                 case "Youdao":
-                    SettingsService.YoudaoApiKey = key; // 格式：AppKey|SecretKey
+                    SettingsService.YoudaoAppKey = key1;
+                    SettingsService.YoudaoSecret = key2;
                     break;
             }
 
@@ -128,6 +191,7 @@ namespace TranslatorApp.Pages
                 verifyResult = string.Empty;
             }
 
+            // 隐藏加载动画
             LoadingOverlay.Visibility = Visibility.Collapsed;
             LoadingRing.IsActive = false;
 
@@ -148,20 +212,6 @@ namespace TranslatorApp.Pages
                     CloseButtonText = "确定"
                 }.ShowAsync();
                 return;
-            }
-
-            // 验证成功后保存
-            switch (apiName)
-            {
-                case "Bing":
-                    SettingsService.BingApiKey = key;
-                    break;
-                case "Baidu":
-                    SettingsService.BaiduApiKey = key;
-                    break;
-                case "Youdao":
-                    SettingsService.YoudaoApiKey = key;
-                    break;
             }
 
             await new ContentDialog

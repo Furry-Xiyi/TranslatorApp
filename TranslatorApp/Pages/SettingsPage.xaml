@@ -1,140 +1,136 @@
 <Page
     x:Class="TranslatorApp.Pages.SettingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Grid>
+
         <ScrollViewer>
-            <StackPanel Spacing="16" Padding="16">
+            <StackPanel Spacing="20" Padding="20" HorizontalAlignment="Left" Width="500">
 
                 <!-- 外观组 -->
-                <TextBlock Text="外观" FontSize="20" FontWeight="SemiBold"/>
-                <Expander IsExpanded="True">
+                <TextBlock Text="外观" FontSize="20" FontWeight="Bold" Margin="0,0,0,8"/>
+
+                <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
                     <Expander.Header>
-                        <StackPanel Orientation="Horizontal">
-                            <FontIcon Glyph="&#xE706;" FontFamily="Segoe MDL2 Assets" />
-                            <StackPanel Margin="12,0,0,0">
-                                <TextBlock Text="主题" FontSize="18" FontWeight="SemiBold"/>
-                                <TextBlock Text="选择浅色、深色或跟随系统" Opacity="0.7"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE771;" FontSize="20"/>
+                            <StackPanel>
+                                <TextBlock Text="主题设置" FontSize="16" FontWeight="Bold"/>
+                                <TextBlock Text="选择应用的显示主题" FontSize="12" Foreground="Gray"/>
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
-                    <StackPanel Spacing="8" Margin="0,8,0,0">
-                        <RadioButtons x:Name="RbTheme" SelectionChanged="RbTheme_SelectionChanged">
-                            <x:String>跟随系统</x:String>
-                            <x:String>浅色</x:String>
-                            <x:String>深色</x:String>
-                        </RadioButtons>
-                    </StackPanel>
+                    <RadioButtons x:Name="RbTheme" SelectionChanged="RbTheme_SelectionChanged">
+                        <RadioButton Content="跟随系统" />
+                        <RadioButton Content="浅色" />
+                        <RadioButton Content="深色" />
+                    </RadioButtons>
                 </Expander>
 
-                <Expander>
+                <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
                     <Expander.Header>
-                        <StackPanel Orientation="Horizontal">
-                            <SymbolIcon Symbol="Bullets" />
-                            <StackPanel Margin="12,0,0,0">
-                                <TextBlock Text="背景材质" FontSize="18" FontWeight="SemiBold"/>
-                                <TextBlock Text="不透明、云母、云母ALT、亚克力" Opacity="0.7"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE790;" FontSize="20"/>
+                            <StackPanel>
+                                <TextBlock Text="背景材质" FontSize="16" FontWeight="Bold"/>
+                                <TextBlock Text="选择窗口背景效果" FontSize="12" Foreground="Gray"/>
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
-                    <StackPanel Spacing="8" Margin="0,8,0,0">
-                        <ComboBox x:Name="CbBackdrop" Width="220" SelectionChanged="CbBackdrop_SelectionChanged">
-                            <ComboBoxItem Content="不透明" Tag="None"/>
-                            <ComboBoxItem Content="云母" Tag="Mica"/>
-                            <ComboBoxItem Content="云母ALT" Tag="MicaAlt"/>
-                            <ComboBoxItem Content="亚克力" Tag="Acrylic"/>
-                        </ComboBox>
-                    </StackPanel>
+                    <RadioButtons x:Name="RbBackdrop" SelectionChanged="RbBackdrop_SelectionChanged">
+                        <RadioButton Content="不透明" Tag="None"/>
+                        <RadioButton Content="云母" Tag="Mica"/>
+                        <RadioButton Content="云母ALT" Tag="MicaAlt"/>
+                        <RadioButton Content="亚克力" Tag="Acrylic"/>
+                    </RadioButtons>
                 </Expander>
 
                 <!-- API 密钥组 -->
-                <TextBlock Text="API 密钥" FontSize="20" FontWeight="SemiBold"/>
+                <TextBlock Text="API 密钥" FontSize="20" FontWeight="Bold" Margin="0,20,0,8"/>
 
-                <!-- Bing -->
-                <Expander IsExpanded="True">
+                <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
                     <Expander.Header>
-                        <StackPanel Orientation="Horizontal">
-                            <SymbolIcon Symbol="Globe" />
-                            <StackPanel Margin="12,0,0,0">
-                                <TextBlock Text="Bing" FontSize="18" FontWeight="SemiBold"/>
-                                <TextBlock Text="在线翻译页将从这里读取" Opacity="0.7"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE943;" FontSize="20"/>
+                            <StackPanel>
+                                <TextBlock Text="Bing API Key" FontSize="16" FontWeight="Bold"/>
+                                <TextBlock Text="输入 Bing AppId 和 SecretKey" FontSize="12" Foreground="Gray"/>
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
                     <StackPanel Spacing="8">
-                        <TextBox x:Name="TbBing" PlaceholderText="输入 Bing API Key" />
+                        <TextBox x:Name="TbBingAppId" PlaceholderText="Bing AppId" />
+                        <TextBox x:Name="TbBingSecret" PlaceholderText="Bing SecretKey" />
                         <Button Content="保存" Click="SaveBing_Click"/>
                     </StackPanel>
                 </Expander>
 
-                <!-- Baidu -->
-                <Expander>
+                <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
                     <Expander.Header>
-                        <StackPanel Orientation="Horizontal">
-                            <SymbolIcon Symbol="World" />
-                            <StackPanel Margin="12,0,0,0">
-                                <TextBlock Text="百度" FontSize="18" FontWeight="SemiBold"/>
-                                <TextBlock Text="在线翻译页将从这里读取" Opacity="0.7"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8FD;" FontSize="20"/>
+                            <StackPanel>
+                                <TextBlock Text="百度 API Key" FontSize="16" FontWeight="Bold"/>
+                                <TextBlock Text="输入 Baidu AppId 和 SecretKey" FontSize="12" Foreground="Gray"/>
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
                     <StackPanel Spacing="8">
-                        <TextBox x:Name="TbBaidu" PlaceholderText="输入 百度翻译 API Key" />
+                        <TextBox x:Name="TbBaiduAppId" PlaceholderText="Baidu AppId" />
+                        <TextBox x:Name="TbBaiduSecret" PlaceholderText="Baidu SecretKey" />
                         <Button Content="保存" Click="SaveBaidu_Click"/>
                     </StackPanel>
                 </Expander>
 
-                <!-- Youdao -->
-                <Expander>
+                <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
                     <Expander.Header>
-                        <StackPanel Orientation="Horizontal">
-                            <SymbolIcon Symbol="Library" />
-                            <StackPanel Margin="12,0,0,0">
-                                <TextBlock Text="有道" FontSize="18" FontWeight="SemiBold"/>
-                                <TextBlock Text="在线翻译页将从这里读取" Opacity="0.7"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8D2;" FontSize="20"/>
+                            <StackPanel>
+                                <TextBlock Text="有道 API Key" FontSize="16" FontWeight="Bold"/>
+                                <TextBlock Text="输入 Youdao AppKey 和 SecretKey" FontSize="12" Foreground="Gray"/>
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
                     <StackPanel Spacing="8">
-                        <TextBox x:Name="TbYoudao" PlaceholderText="输入 有道翻译 API Key" />
+                        <TextBox x:Name="TbYoudaoAppKey" PlaceholderText="Youdao AppKey" />
+                        <TextBox x:Name="TbYoudaoSecret" PlaceholderText="Youdao SecretKey" />
                         <Button Content="保存" Click="SaveYoudao_Click"/>
                     </StackPanel>
                 </Expander>
 
                 <!-- 关于组 -->
-                <TextBlock Text="关于" FontSize="20" FontWeight="SemiBold"/>
-                <Expander IsExpanded="True">
+                <TextBlock Text="关于" FontSize="20" FontWeight="Bold" Margin="0,20,0,8"/>
+
+                <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
                     <Expander.Header>
-                        <StackPanel Orientation="Horizontal">
-                            <Image Width="40" Height="40" Source="ms-appx:///Assets/StoreLogo.png"/>
-                            <StackPanel Margin="12,0,0,0">
-                                <TextBlock x:Name="TxtAppName" FontSize="18" FontWeight="SemiBold" Text="应用名占位"/>
-                                <TextBlock Text="©2025 Furry Xiyi。保留所有权利。" Opacity="0.7"/>
-                                <TextBlock x:Name="TxtVersion" Opacity="0.7" />
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Image Source="ms-appx:///Assets/AppIcon.png" Width="48" Height="48"/>
+                            <StackPanel>
+                                <TextBlock x:Name="TxtAppName" FontSize="18" FontWeight="Bold"/>
+                                <TextBlock Text="©2025 Furry Xiyi。保留所有权利。" FontSize="12"/>
+                                <TextBlock x:Name="TxtVersion" FontSize="12"/>
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
-                    <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,8,0,0">
-                        <!-- TODO: 替换为你的实际链接 -->
-                        <HyperlinkButton Content="加入QQ群聊" NavigateUri="https://TODO-QQ"/>
-                        <HyperlinkButton Content="加入Discord群组" NavigateUri="https://TODO-Discord"/>
+                    <StackPanel Margin="0,8,0,0" Spacing="6">
+                        <HyperlinkButton Content="加入QQ群聊"/>
+                        <HyperlinkButton Content="加入Discord群组"/>
                     </StackPanel>
                 </Expander>
 
-                <!-- 页底反馈链接 -->
-                <!-- TODO: 替换为你的反馈链接 -->
-                <HyperlinkButton Content="发送反馈" HorizontalAlignment="Left" NavigateUri="https://TODO-Feedback"/>
+                <HyperlinkButton Content="发送反馈" Margin="0,20,0,0"/>
+
             </StackPanel>
         </ScrollViewer>
 
         <!-- 全屏加载遮罩 -->
-        <Grid x:Name="LoadingOverlay" Background="#80000000" Visibility="Collapsed">
-            <ProgressRing x:Name="LoadingRing" IsActive="False" Width="80" Height="80"
+        <Grid x:Name="LoadingOverlay" Background="{ThemeResource SystemAccentColor}" Opacity="0.4" Visibility="Collapsed">
+            <ProgressRing x:Name="LoadingRing" IsActive="False" Width="60" Height="60"
+                          Foreground="{ThemeResource SystemAccentColor}"
                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Grid>
+
     </Grid>
 </Page>
