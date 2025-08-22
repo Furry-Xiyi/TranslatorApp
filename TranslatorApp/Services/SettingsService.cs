@@ -1,4 +1,6 @@
-﻿using Windows.Storage;
+﻿using System.Collections.Generic;
+using System.Text.Json;
+using Windows.Storage;
 
 namespace TranslatorApp.Services
 {
@@ -19,7 +21,7 @@ namespace TranslatorApp.Services
             set => Local.Values[nameof(BingSecret)] = value;
         }
 
-        // 兼容旧字段：如有旧代码仍读取 BingApiKey，这里保留
+        // 兼容旧字段
         public static string BingApiKey
         {
             get => (string?)Local.Values[nameof(BingApiKey)] ?? string.Empty;
@@ -52,18 +54,40 @@ namespace TranslatorApp.Services
             set => Local.Values[nameof(YoudaoSecret)] = value;
         }
 
-        // 最近查词站点（可选）
+        // 最近查词站点
         public static string LastLookupSite
         {
             get => (string?)Local.Values[nameof(LastLookupSite)] ?? "Youdao";
             set => Local.Values[nameof(LastLookupSite)] = value;
         }
 
-        // 新增：最近使用的翻译 API
+        // 最近使用的翻译 API
         public static string LastUsedApi
         {
             get => (string?)Local.Values[nameof(LastUsedApi)] ?? string.Empty;
             set => Local.Values[nameof(LastUsedApi)] = value;
+        }
+
+        // 新增：查词历史记录
+        public static List<string> LookupHistory
+        {
+            get
+            {
+                var json = Local.Values[nameof(LookupHistory)] as string;
+                if (string.IsNullOrEmpty(json)) return new List<string>();
+                try
+                {
+                    return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+                }
+                catch
+                {
+                    return new List<string>();
+                }
+            }
+            set
+            {
+                Local.Values[nameof(LookupHistory)] = JsonSerializer.Serialize(value ?? new List<string>());
+            }
         }
 
         // 是否已配置任意一个 API

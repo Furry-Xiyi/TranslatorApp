@@ -2,8 +2,7 @@
     x:Class="TranslatorApp.Pages.OnlineTranslatePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:TranslatorApp.Pages"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    xmlns:local="using:TranslatorApp.Pages">
 
     <Grid Padding="20" RowSpacing="20">
         <Grid.RowDefinitions>

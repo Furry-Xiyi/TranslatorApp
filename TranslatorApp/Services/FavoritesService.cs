@@ -1,57 +1,79 @@
-﻿using System.Collections.ObjectModel;
+﻿#nullable enable
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using TranslatorApp.Models;
 using Windows.Storage;
 using System;
 
-namespace TranslatorApp.Services;
-
-public static class FavoritesService
+namespace TranslatorApp.Services
 {
-    private const string Key = "FavoritesJson";
-    private static readonly ApplicationDataContainer Local = ApplicationData.Current.LocalSettings;
-
-    private static ObservableCollection<FavoriteItem>? _cache;
-
-    public static ObservableCollection<FavoriteItem> Items
+    public static class FavoritesService
     {
-        get
+        private const string Key = "FavoritesJson";
+        private static readonly ApplicationDataContainer Local = ApplicationData.Current.LocalSettings;
+
+        // 缓存集合，保证永远不为 null
+        private static ObservableCollection<FavoriteItem> _cache = new();
+
+        public static ObservableCollection<FavoriteItem> Items
         {
-            if (_cache is not null) return _cache;
-            var json = (string?)Local.Values[Key];
-            if (!string.IsNullOrWhiteSpace(json))
+            get => _cache;
+            set => _cache = value ?? new ObservableCollection<FavoriteItem>();
+        }
+
+        /// <summary>
+        /// 从本地存储加载收藏数据到缓存
+        /// </summary>
+        public static void Load()
+        {
+            if (Local.Values.ContainsKey(Key))
             {
-                try
+                var json = Local.Values[Key] as string;
+                if (!string.IsNullOrWhiteSpace(json))
                 {
-                    var list = JsonSerializer.Deserialize<ObservableCollection<FavoriteItem>>(json);
-                    _cache = list ?? new();
+                    try
+                    {
+                        var list = JsonSerializer.Deserialize<ObservableCollection<FavoriteItem>>(json);
+                        _cache = list ?? new ObservableCollection<FavoriteItem>();
+                    }
+                    catch
+                    {
+                        _cache = new ObservableCollection<FavoriteItem>();
+                    }
                 }
-                catch { _cache = new(); }
+                else
+                {
+                    _cache = new ObservableCollection<FavoriteItem>();
+                }
             }
-            else _cache = new();
-            return _cache;
+            else
+            {
+                _cache = new ObservableCollection<FavoriteItem>();
+            }
         }
-    }
 
-    public static void Add(string term)
-    {
-        if (string.IsNullOrWhiteSpace(term)) return;
-        if (!Items.Any(i => i.Term.Equals(term, StringComparison.OrdinalIgnoreCase)))
+        public static void Add(string term)
         {
-            Items.Add(new FavoriteItem { Term = term });
-            Save();
+            if (string.IsNullOrWhiteSpace(term)) return;
+
+            if (!_cache.Any(i => i.Term.Equals(term, StringComparison.OrdinalIgnoreCase)))
+            {
+                _cache.Add(new FavoriteItem { Term = term });
+                Save();
+            }
         }
-    }
 
-    public static void Remove(FavoriteItem item)
-    {
-        if (Items.Remove(item)) Save();
-    }
+        public static void Remove(FavoriteItem item)
+        {
+            if (_cache.Remove(item))
+                Save();
+        }
 
-    public static void Save()
-    {
-        var json = JsonSerializer.Serialize(Items);
-        Local.Values[Key] = json;
+        public static void Save()
+        {
+            var json = JsonSerializer.Serialize(_cache);
+            Local.Values[Key] = json;
+        }
     }
 }
