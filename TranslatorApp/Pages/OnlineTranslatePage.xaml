@@ -2,106 +2,119 @@
     x:Class="TranslatorApp.Pages.OnlineTranslatePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:TranslatorApp.Pages">
+    xmlns:local="using:TranslatorApp.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
 
-    <Grid Padding="20" RowSpacing="20">
+    <!-- 顶部 Padding 从 20 改为 10，整体上移 -->
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- 语言选择 -->
             <RowDefinition Height="*"/>
-            <!-- 文本框 -->
             <RowDefinition Height="Auto"/>
-            <!-- API选择+翻译按钮 -->
         </Grid.RowDefinitions>
 
-        <!-- 顶部语言选择 -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-            <ComboBox x:Name="CbFromLang" Width="150" PlaceholderText="输入语言"/>
-            <Button x:Name="BtnSwapLang"
-                    Width="{Binding ActualHeight, ElementName=CbFromLang}"
-                    Height="{Binding ActualHeight, ElementName=CbFromLang}"
-                    MinHeight="40"
-                    Padding="0"
-                    Click="BtnSwapLang_Click">
-                <SymbolIcon Symbol="Switch" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        <!-- 浮动 InfoBar -->
+        <InfoBar x:Name="TopInfoBar"
+                 Width="300"
+                 IsOpen="False"
+                 Severity="Success"
+                 Title="成功"
+                 Message="这里是提示内容"
+                 IsClosable="False"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Top"
+                 Margin="0,10,0,0"
+                 RenderTransformOrigin="0.5,0">
+            <InfoBar.RenderTransform>
+                <TranslateTransform Y="-80"/>
+            </InfoBar.RenderTransform>
+        </InfoBar>
+
+        <!-- 语言选择区，Margin 从 40 改为 10 -->
+        <StackPanel Grid.Row="0"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Spacing="8"
+                    Margin="0,10,0,0">
+            <ComboBox x:Name="CbFromLang" Width="120"/>
+            <Button x:Name="BtnSwapLang" Width="40" Click="BtnSwapLang_Click">
+                <SymbolIcon Symbol="Switch"/>
             </Button>
-            <ComboBox x:Name="CbToLang" Width="150" PlaceholderText="输出语言"/>
+            <ComboBox x:Name="CbToLang" Width="120"/>
         </StackPanel>
 
-        <!-- 中间左右对称文本框 -->
-        <Grid Grid.Row="1" ColumnSpacing="20">
+        <!-- 输入输出区，减少上下 Margin，并加中间间距列 -->
+        <Grid Grid.Row="1" Margin="0,10,0,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <!-- 中间固定间距 -->
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- 输入文本框 -->
+            <!-- 输入框 -->
             <Grid Grid.Column="0">
                 <TextBox x:Name="TbInput"
+                         TextChanged="TbInput_TextChanged"
                          AcceptsReturn="True"
                          TextWrapping="Wrap"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         PlaceholderText="在此输入待翻译文本..."
-                         Padding="10,10,10,50"
-                         TextChanged="TbInput_TextChanged"/>
-                <!-- 按钮组（右下角） -->
+                         PlaceholderText="请输入要翻译的文本"/>
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Bottom"
-                            Margin="0,0,5,5"
-                            Spacing="5">
-                    <Button x:Name="BtnCopyInput" Width="32" Height="32" Padding="0" Click="BtnCopyInput_Click">
-                        <SymbolIcon Symbol="Copy" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                            Margin="0,0,6,6"
+                            Spacing="4">
+                    <Button Width="36" Height="36" Padding="4" Click="BtnCopyInput_Click">
+                        <SymbolIcon Symbol="Copy"/>
                     </Button>
                 </StackPanel>
             </Grid>
 
-            <!-- 输出文本框（只读 + 无内容禁用） -->
-            <Grid Grid.Column="1">
+            <!-- 输出框 -->
+            <Grid Grid.Column="2">
                 <TextBox x:Name="TbOutput"
+                         IsReadOnly="True"
                          AcceptsReturn="True"
                          TextWrapping="Wrap"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         IsReadOnly="True"
-                         IsEnabled="False"
-                         PlaceholderText="翻译结果将显示在这里"
-                         Padding="10,10,10,50"/>
-                <!-- 按钮组（右下角） -->
+                         PlaceholderText="翻译结果"
+                         IsHitTestVisible="False"
+                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                         Opacity="1"/>
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Bottom"
-                            Margin="0,0,5,5"
-                            Spacing="5">
-                    <Button x:Name="BtnCopyOutput" Width="32" Height="32" Padding="0" Click="BtnCopyOutput_Click">
-                        <SymbolIcon Symbol="Copy" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                            Margin="0,0,6,6"
+                            Spacing="4">
+                    <Button Width="36" Height="36" Padding="4" Click="BtnCopyOutput_Click">
+                        <SymbolIcon Symbol="Copy"/>
                     </Button>
-                    <Button x:Name="BtnSpeakOutput" Width="32" Height="32" Padding="0" Click="BtnSpeakOutput_Click">
-                        <SymbolIcon Symbol="Volume" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    <Button Width="36" Height="36" Padding="4" Click="BtnSpeakOutput_Click">
+                        <SymbolIcon Symbol="Volume"/>
                     </Button>
-                    <Button x:Name="BtnFavOutput" Width="32" Height="32" Padding="0" Click="BtnFavOutput_Click">
-                        <SymbolIcon Symbol="Favorite" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    <Button Width="36" Height="36" Padding="4" Click="BtnFavOutput_Click">
+                        <SymbolIcon Symbol="Favorite"/>
                     </Button>
                 </StackPanel>
             </Grid>
         </Grid>
 
-        <!-- 底部 API 选择 + 翻译按钮 -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-            <ComboBox x:Name="CbApi" Width="200" Height="40" PlaceholderText="选择翻译 API"/>
-            <Button x:Name="BtnTranslate" Content="翻译" Width="100" Height="40" Click="BtnTranslate_Click"/>
+        <!-- API 选择与翻译按钮 -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Spacing="8">
+            <ComboBox x:Name="CbApi" Width="140"/>
+            <Button x:Name="BtnTranslate"
+                    Content="翻译"
+                    Width="100"
+                    IsEnabled="False" 
+                Click="BtnTranslate_Click"
+                    Background="{ThemeResource SystemControlBackgroundAccentBrush}"
+                    Foreground="White"/>
         </StackPanel>
-
-        <!-- 顶部滑出提示 -->
-        <Border x:Name="ToastPanel"
-                Background="{ThemeResource AccentFillColorDefaultBrush}"
-                CornerRadius="4"
-                Padding="10"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Top"
-                Opacity="0">
-            <TextBlock x:Name="ToastText" Foreground="White"/>
-        </Border>
     </Grid>
 </Page>

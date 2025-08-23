@@ -8,19 +8,18 @@
     Title="翻译">
 
     <Grid>
-        <!-- 自定义标题栏区域 -->
+        <!-- 自定义标题栏 -->
         <Grid x:Name="CustomDragRegion"
               Height="48"
               VerticalAlignment="Top"
               Background="Transparent">
-            <!-- 三列布局：左-中-右。中间列承载需要“水平居中”的内容 -->
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- 左侧：应用图标 + 标题 -->
+            <!-- 左侧 -->
             <StackPanel Grid.Column="0"
                         Orientation="Horizontal"
                         VerticalAlignment="Center"
@@ -30,13 +29,13 @@
                 <TextBlock Text="翻译" FontSize="16" VerticalAlignment="Center"/>
             </StackPanel>
 
-            <!-- 中间：供页面注入的“居中容器” -->
+            <!-- 中间 -->
             <Grid x:Name="TitleBarCenterHost"
                   Grid.Column="1"
                   VerticalAlignment="Center"
                   HorizontalAlignment="Stretch"/>
 
-            <!-- 右侧：预留（可放按钮等） -->
+            <!-- 右侧 -->
             <StackPanel Grid.Column="2"
                         Orientation="Horizontal"
                         VerticalAlignment="Center"
@@ -44,7 +43,7 @@
                         Margin="0,0,12,0"/>
         </Grid>
 
-        <!-- 主内容区（标题栏高度 48） -->
+        <!-- 主内容区 -->
         <Grid Margin="0,48,0,0">
             <controls:NavigationView x:Name="NavView"
                                      PaneDisplayMode="Left"
@@ -73,6 +72,18 @@
 
                 <Frame x:Name="ContentFrame"/>
             </controls:NavigationView>
+        </Grid>
+
+        <!-- 全局 Loading 遮罩 -->
+        <Grid x:Name="LoadingOverlay"
+              Background="#80000000"
+              Visibility="Collapsed">
+            <ProgressRing IsActive="True"
+                          Width="60"
+                          Height="60"
+                          Foreground="{ThemeResource SystemAccentColor}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"/>
         </Grid>
     </Grid>
 </Window>

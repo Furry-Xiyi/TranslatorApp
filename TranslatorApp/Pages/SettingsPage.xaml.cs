@@ -39,10 +39,9 @@ namespace TranslatorApp.Pages
             _lastBackdropTag = backdropValue;
             RbBackdrop.SelectedIndex = backdropValue switch
             {
-                "None" => 0,
-                "Mica" => 1,
-                "MicaAlt" => 2,
-                "Acrylic" => 3,
+                "Mica" => 0,
+                "MicaAlt" => 1,
+                "Acrylic" => 2,
                 _ => 1
             };
 
@@ -109,7 +108,6 @@ namespace TranslatorApp.Pages
                 {
                     App.MainWindow.SystemBackdrop = tag switch
                     {
-                        "None" => null,
                         "MicaAlt" => new MicaBackdrop { Kind = MicaKind.BaseAlt },
                         "Acrylic" => new DesktopAcrylicBackdrop(),
                         _ => new MicaBackdrop { Kind = MicaKind.Base }
@@ -145,8 +143,8 @@ namespace TranslatorApp.Pages
 
         private async Task SaveApiKeyAsync(string apiName, string key1, string key2 = "")
         {
-            LoadingOverlay.Visibility = Visibility.Visible;
-            LoadingRing.IsActive = true;
+            // 调用 MainWindow 的全局遮罩
+            App.MainWindow?.ShowLoadingOverlay();
 
             switch (apiName)
             {
@@ -175,8 +173,8 @@ namespace TranslatorApp.Pages
                 verifyResult = string.Empty;
             }
 
-            LoadingOverlay.Visibility = Visibility.Collapsed;
-            LoadingRing.IsActive = false;
+            // 隐藏全局遮罩
+            App.MainWindow?.HideLoadingOverlay();
 
             if (string.IsNullOrWhiteSpace(verifyResult) ||
                 verifyResult.Contains("失败") ||

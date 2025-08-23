@@ -1,4 +1,3 @@
-using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -10,6 +9,8 @@ using System.Threading.Tasks;
 using TranslatorApp.Pages;
 using TranslatorApp.Services;
 using Windows.ApplicationModel;
+using Windows.Storage;
+using Windows.UI.ViewManagement;
 
 namespace TranslatorApp;
 
@@ -19,18 +20,15 @@ public sealed partial class MainWindow : Window
     private bool _welcomeShown = false;
     private AppWindow? _appWindow;
 
-    // 提供给页面的“中间居中容器”访问器
     public Panel TitleBarCenterPanel => TitleBarCenterHost;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        // 扩展内容到标题栏并设置可拖拽区域
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(CustomDragRegion);
 
-        // 取得 AppWindow 并配置标题栏
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
@@ -40,24 +38,41 @@ public sealed partial class MainWindow : Window
             var titleBar = _appWindow.TitleBar;
             if (AppWindowTitleBar.IsCustomizationSupported())
             {
+                var transparent = Windows.UI.Color.FromArgb(0, 0, 0, 0);
                 titleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
-                titleBar.ButtonBackgroundColor = Colors.Transparent;
-                titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+                titleBar.ButtonBackgroundColor = transparent;
+                titleBar.ButtonInactiveBackgroundColor = transparent;
             }
             UpdateDragRegionPadding();
             _appWindow.Changed += AppWindow_Changed;
         }
 
+        // 按钮前景色跟随系统强调色
+        var uiSettings = new UISettings();
+        uiSettings.ColorValuesChanged += (s, e) =>
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (_appWindow is not null)
+                {
+                    var accent = uiSettings.GetColorValue(UIColorType.Accent);
+                    _appWindow.TitleBar.ButtonForegroundColor = accent;
+                }
+            });
+        };
+
         SizeChanged += (_, __) => UpdateDragRegionPadding();
         TryLoadAppIcon();
 
-        // 默认页面
         NavView.SelectedItem = Nav_Online;
         NavigateTo(typeof(OnlineTranslatePage));
 
         ContentFrame.Navigated += ContentFrame_Navigated;
         Activated += MainWindow_Activated;
     }
+
+    public void ShowLoadingOverlay() => LoadingOverlay.Visibility = Visibility.Visible;
+    public void HideLoadingOverlay() => LoadingOverlay.Visibility = Visibility.Collapsed;
 
     private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
     {
@@ -71,7 +86,6 @@ public sealed partial class MainWindow : Window
         var tb = _appWindow.TitleBar;
         if (tb != null)
         {
-            // 避开系统按钮保留区
             CustomDragRegion.Padding = new Thickness(tb.LeftInset, 0, tb.RightInset, 0);
         }
     }
@@ -190,7 +204,12 @@ public sealed partial class MainWindow : Window
             PrimaryButtonText = "去填写",
             CloseButtonText = "稍后",
             DefaultButton = ContentDialogButton.Primary,
-            Content = new TextBlock { Text = "使用翻译需要填写 API 密钥", Opacity = 0.8 }
+            Content = new TextBlock
+            {
+                Text = "使用翻译需要填写 API 密钥",
+                Opacity = 0.8,
+                TextWrapping = TextWrapping.Wrap
+            }
         };
 
         var result = await dialog.ShowAsync();

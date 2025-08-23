@@ -4,14 +4,17 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Grid>
-
         <ScrollViewer>
             <StackPanel Spacing="20" Padding="20" HorizontalAlignment="Stretch">
 
                 <!-- 外观组 -->
                 <TextBlock Text="外观" FontSize="20" FontWeight="Bold" Margin="0,0,0,8"/>
 
-                <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
+                <!-- 主题设置：需要靠左 -->
+                <Expander IsExpanded="False"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Left"
+                          MinHeight="80">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE771;" FontSize="20"/>
@@ -21,15 +24,21 @@
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
-                    <RadioButtons x:Name="RbTheme" SelectionChanged="RbTheme_SelectionChanged"
+                    <RadioButtons x:Name="RbTheme"
+                                  SelectionChanged="RbTheme_SelectionChanged"
+                                  HorizontalAlignment="Left"
                                   HorizontalContentAlignment="Left">
-                        <RadioButton Content="跟随系统" />
-                        <RadioButton Content="浅色" />
-                        <RadioButton Content="深色" />
+                        <RadioButton Content="跟随系统"/>
+                        <RadioButton Content="浅色"/>
+                        <RadioButton Content="深色"/>
                     </RadioButtons>
                 </Expander>
 
-                <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
+                <!-- 背景材质：需要靠左 -->
+                <Expander IsExpanded="False"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Left"
+                          MinHeight="80">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE790;" FontSize="20"/>
@@ -39,9 +48,10 @@
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
-                    <RadioButtons x:Name="RbBackdrop" SelectionChanged="RbBackdrop_SelectionChanged"
+                    <RadioButtons x:Name="RbBackdrop"
+                                  SelectionChanged="RbBackdrop_SelectionChanged"
+                                  HorizontalAlignment="Left"
                                   HorizontalContentAlignment="Left">
-                        <RadioButton Content="不透明" Tag="None"/>
                         <RadioButton Content="云母" Tag="Mica"/>
                         <RadioButton Content="云母ALT" Tag="MicaAlt"/>
                         <RadioButton Content="亚克力" Tag="Acrylic"/>
@@ -51,7 +61,11 @@
                 <!-- API 密钥组 -->
                 <TextBlock Text="API 密钥" FontSize="20" FontWeight="Bold" Margin="0,20,0,8"/>
 
-                <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
+                <!-- Bing API Key：需要靠左 -->
+                <Expander IsExpanded="False"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Left"
+                          MinHeight="80">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE943;" FontSize="20"/>
@@ -63,14 +77,18 @@
                     </Expander.Header>
                     <StackPanel Spacing="8" HorizontalAlignment="Left">
                         <TextBox x:Name="TbBingAppId" PlaceholderText="Bing AppId"
-                                 MinWidth="300" HorizontalAlignment="Stretch"/>
+                                 Width="300" HorizontalAlignment="Left"/>
                         <TextBox x:Name="TbBingSecret" PlaceholderText="Bing SecretKey"
-                                 MinWidth="300" HorizontalAlignment="Stretch"/>
-                        <Button Content="保存" Click="SaveBing_Click"/>
+                                 Width="300" HorizontalAlignment="Left"/>
+                        <Button Content="保存" Click="SaveBing_Click" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </Expander>
 
-                <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
+                <!-- 百度 API Key：需要靠左 -->
+                <Expander IsExpanded="False"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Left"
+                          MinHeight="80">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE8FD;" FontSize="20"/>
@@ -82,14 +100,18 @@
                     </Expander.Header>
                     <StackPanel Spacing="8" HorizontalAlignment="Left">
                         <TextBox x:Name="TbBaiduAppId" PlaceholderText="Baidu AppId"
-                                 MinWidth="300" HorizontalAlignment="Stretch"/>
+                                 Width="300" HorizontalAlignment="Left"/>
                         <TextBox x:Name="TbBaiduSecret" PlaceholderText="Baidu SecretKey"
-                                 MinWidth="300" HorizontalAlignment="Stretch"/>
-                        <Button Content="保存" Click="SaveBaidu_Click"/>
+                                 Width="300" HorizontalAlignment="Left"/>
+                        <Button Content="保存" Click="SaveBaidu_Click" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </Expander>
 
-                <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
+                <!-- 有道 API Key：需要靠左 -->
+                <Expander IsExpanded="False"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Left"
+                          MinHeight="80">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE8D2;" FontSize="20"/>
@@ -101,45 +123,44 @@
                     </Expander.Header>
                     <StackPanel Spacing="8" HorizontalAlignment="Left">
                         <TextBox x:Name="TbYoudaoAppKey" PlaceholderText="Youdao AppKey"
-                                 MinWidth="300" HorizontalAlignment="Stretch"/>
+                                 Width="300" HorizontalAlignment="Left"/>
                         <TextBox x:Name="TbYoudaoSecret" PlaceholderText="Youdao SecretKey"
-                                 MinWidth="300" HorizontalAlignment="Stretch"/>
-                        <Button Content="保存" Click="SaveYoudao_Click"/>
+                                 Width="300" HorizontalAlignment="Left"/>
+                        <Button Content="保存" Click="SaveYoudao_Click" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </Expander>
 
-                <!-- 关于组 -->
+                <!-- 关于组：保持默认（不加 HorizontalContentAlignment） -->
                 <TextBlock Text="关于" FontSize="20" FontWeight="Bold" Margin="0,20,0,8"/>
 
-                <Expander IsExpanded="False" HorizontalAlignment="Stretch" MinHeight="80">
+                <Expander IsExpanded="False"
+          HorizontalAlignment="Stretch"
+          HorizontalContentAlignment="Left"
+          MinHeight="80">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="12">
-                            <!-- 缩小后的应用图标 -->
                             <Image x:Name="ImgAppIcon" Width="20" Height="20" Stretch="UniformToFill"/>
                             <StackPanel>
                                 <TextBlock x:Name="TxtAppName" FontSize="18" FontWeight="Bold"/>
-                                <TextBlock Text="©2025 Furry Xiyi。保留所有权利。" FontSize="12"/>
-                                <TextBlock x:Name="TxtVersion" FontSize="12"/>
+                                <TextBlock Text="©2025 Furry Xiyi。保留所有权利。" FontSize="12" Foreground="Gray"/>
+                                <TextBlock x:Name="TxtVersion" FontSize="15"/>
                             </StackPanel>
                         </StackPanel>
                     </Expander.Header>
-                    <StackPanel Margin="0,8,0,0" Spacing="6" HorizontalAlignment="Left">
-                        <HyperlinkButton Content="加入QQ群聊" NavigateUri="https://qm.qq.com/q/oBmbTWuE5q"/>
-                        <HyperlinkButton Content="加入Discord群组" NavigateUri="https://discord.gg/BRYYppY2"/>
+
+                    <StackPanel Margin="0,8,0,0" Spacing="6">
+                        <HyperlinkButton Content="加入QQ群聊"
+                         NavigateUri="https://qm.qq.com/q/oBmbTWuE5q"/>
+                        <HyperlinkButton Content="加入Discord群组"
+                         NavigateUri="https://discord.gg/BRYYppY2"/>
                     </StackPanel>
                 </Expander>
 
-                <HyperlinkButton Content="发送反馈" NavigateUri="https://github.com/Furry-Xiyi/TranslatorApp/issues" Margin="0,20,0,0" HorizontalAlignment="Left"/>
-
+                <HyperlinkButton Content="发送反馈"
+                                 NavigateUri="https://github.com/Furry-Xiyi/TranslatorApp/issues"
+                                 Margin="0,20,0,0"
+                                 HorizontalAlignment="Left"/>
             </StackPanel>
         </ScrollViewer>
-
-        <!-- 全屏加载遮罩 -->
-        <Grid x:Name="LoadingOverlay" Background="{ThemeResource SystemAccentColor}" Opacity="0.4" Visibility="Collapsed">
-            <ProgressRing x:Name="LoadingRing" IsActive="False" Width="60" Height="60"
-                          Foreground="{ThemeResource SystemAccentColor}"
-                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Grid>
-
     </Grid>
 </Page>

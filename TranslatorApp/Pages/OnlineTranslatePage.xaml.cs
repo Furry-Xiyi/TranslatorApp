@@ -2,6 +2,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
+using Microsoft.UI.Xaml.Media.Animation;
 using System;
 using System.Linq;
 using System.Threading;
@@ -39,12 +40,13 @@ namespace TranslatorApp.Pages
             _infoTimer.Interval = TimeSpan.FromSeconds(2);
             _infoTimer.Tick += (_, __) =>
             {
-                ToastPanel.Opacity = 0;
+                HideToast();
                 _infoTimer?.Stop();
             };
 
             LoadLanguageOptions();
             LoadApiOptions();
+            BtnTranslate.IsEnabled = CanTranslate; // 初始化按钮状态
         }
 
         private void OnlineTranslatePage_Unloaded(object sender, RoutedEventArgs e)
@@ -108,7 +110,6 @@ namespace TranslatorApp.Pages
 
         private void BtnSwapLang_Click(object sender, RoutedEventArgs e)
         {
-            // 无条件交换
             var inIndex = CbFromLang.SelectedIndex;
             var outIndex = CbToLang.SelectedIndex;
             CbFromLang.SelectedIndex = outIndex;
@@ -117,32 +118,68 @@ namespace TranslatorApp.Pages
 
         private void TbInput_TextChanged(object sender, TextChangedEventArgs e)
         {
-            // 输入变化时同步到输出框
-            TbOutput.Text = TbInput.Text;
+            BtnTranslate.IsEnabled = !string.IsNullOrWhiteSpace(TbInput.Text); // 有内容才可点
+            if (string.IsNullOrWhiteSpace(TbInput.Text))
+            {
+                TbOutput.Text = string.Empty;
+            }
         }
 
         private void ShowToast(string message)
         {
-            ToastText.Text = message;
-            ToastPanel.Opacity = 1;
+            TopInfoBar.Message = message;
+            TopInfoBar.IsOpen = true;
+
+            var slideIn = new DoubleAnimation
+            {
+                To = 0,
+                Duration = new Duration(TimeSpan.FromMilliseconds(200)),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            Storyboard.SetTarget(slideIn, TopInfoBar.RenderTransform);
+            Storyboard.SetTargetProperty(slideIn, "Y");
+
+            var sb = new Storyboard();
+            sb.Children.Add(slideIn);
+            sb.Begin();
+
             _infoTimer?.Stop();
             _infoTimer?.Start();
         }
 
-        private void BtnCopyInput_Click(object sender, RoutedEventArgs e)
+        private void HideToast()
+        {
+            var slideOut = new DoubleAnimation
+            {
+                To = -80,
+                Duration = new Duration(TimeSpan.FromMilliseconds(200)),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+            };
+            Storyboard.SetTarget(slideOut, TopInfoBar.RenderTransform);
+            Storyboard.SetTargetProperty(slideOut, "Y");
+
+            var sb = new Storyboard();
+            sb.Children.Add(slideOut);
+            sb.Completed += (_, __) => TopInfoBar.IsOpen = false;
+            sb.Begin();
+        }
+
+        private async void BtnCopyInput_Click(object sender, RoutedEventArgs e)
         {
             var dp = new DataPackage();
             dp.SetText(TbInput.Text ?? string.Empty);
             Clipboard.SetContent(dp);
             ShowToast("已复制输入文本");
+            await Task.Delay(300);
         }
 
-        private void BtnCopyOutput_Click(object sender, RoutedEventArgs e)
+        private async void BtnCopyOutput_Click(object sender, RoutedEventArgs e)
         {
             var dp = new DataPackage();
             dp.SetText(TbOutput.Text ?? string.Empty);
             Clipboard.SetContent(dp);
             ShowToast("已复制翻译结果");
+            await Task.Delay(300);
         }
 
         private async void BtnSpeakOutput_Click(object sender, RoutedEventArgs e)
@@ -199,6 +236,7 @@ namespace TranslatorApp.Pages
                 var r = await dlg.ShowAsync();
                 if (r == ContentDialogResult.Primary)
                 {
+                    await Task.Delay(200); // 延时避免两个对话框贴一起
                     Frame.Navigate(typeof(SettingsPage));
                 }
                 return;
@@ -223,16 +261,17 @@ namespace TranslatorApp.Pages
             try
             {
                 var result = await TranslationService.TranslateAsync(
-                    provider: api,
-                    text: text,
-                    from: sourceLang,
-                    to: targetLang,
-                    cancellationToken: _cts.Token);
+    provider: api,
+    text: text,
+    from: sourceLang,
+    to: targetLang,
+    cancellationToken: _cts.Token);
 
                 TbOutput.Text = result;
             }
             catch (OperationCanceledException)
             {
+                // 用户取消翻译，不做处理
             }
             catch (Exception ex)
             {
@@ -261,7 +300,7 @@ namespace TranslatorApp.Pages
 
         private void SetBusy(bool isBusy, string apiLabel)
         {
-            BtnTranslate.IsEnabled = !isBusy;
+            BtnTranslate.IsEnabled = !isBusy && !string.IsNullOrWhiteSpace(TbInput.Text);
             CbApi.IsEnabled = !isBusy;
             CbFromLang.IsEnabled = !isBusy;
             CbToLang.IsEnabled = !isBusy;
