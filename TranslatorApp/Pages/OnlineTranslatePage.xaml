@@ -20,26 +20,26 @@
 
             <!-- 语言选择区 -->
             <StackPanel Grid.Row="0"
-            Orientation="Horizontal"
-            HorizontalAlignment="Center"
-            Spacing="8"
-            Margin="0,10,0,0">
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="8"
+                        Margin="0,10,0,0">
                 <ComboBox x:Name="CbFromLang" Width="120" Height="32"/>
 
                 <Button x:Name="BtnSwapLang"
-            Width="40"
-            Height="32"
-            Click="BtnSwapLang_Click"
-            Padding="0"
-            Background="{ThemeResource ButtonBackgroundThemeBrush}">
+                        Width="40"
+                        Height="32"
+                        Click="BtnSwapLang_Click"
+                        Padding="0"
+                        Background="{ThemeResource ButtonBackgroundThemeBrush}">
                     <Grid RenderTransformOrigin="0.5,0.5">
                         <Grid.RenderTransform>
                             <RotateTransform x:Name="SwapRotate"/>
                         </Grid.RenderTransform>
                         <Viewbox Stretch="Uniform"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center"
-                     Width="20" Height="20">
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 Width="20" Height="20">
                             <SymbolIcon Symbol="Switch"/>
                         </Viewbox>
                     </Grid>
@@ -77,6 +77,15 @@
                                 Width="36" Height="36" Padding="4"
                                 Click="BtnMicInput_Click">
                             <SymbolIcon Symbol="Microphone"/>
+                        </Button>
+                        <!-- 新增 OCR 截图按钮 -->
+                        <Button x:Name="BtnOcrCapture"
+                            Width="36"
+                            Height="36"
+                            Padding="4"
+                            Click="BtnOcrCapture_Click"
+                            ToolTipService.ToolTip="截图OCR识别">
+                            <FontIcon Glyph="&#xE722;"/>
                         </Button>
                     </StackPanel>
                 </Grid>
@@ -126,7 +135,7 @@
             </StackPanel>
         </Grid>
 
-        <!-- 悬浮 InfoBar（放在最后，不占布局） -->
+        <!-- 悬浮 InfoBar -->
         <InfoBar x:Name="TopInfoBar"
                  Width="300"
                  IsOpen="False"

@@ -1,17 +1,25 @@
-﻿using Microsoft.UI.Dispatching;
+﻿using Microsoft.Graphics.Canvas;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TranslatorApp.Services;
 using Windows.ApplicationModel.DataTransfer;
+using Windows.Globalization;
+using Windows.Graphics.Capture;
+using Windows.Graphics.DirectX;
+using Windows.Graphics.DirectX.Direct3D11;
+using Windows.Graphics.Imaging;
+using Windows.Media.Ocr;
 using Windows.Media.SpeechRecognition;
 using Windows.Media.SpeechSynthesis;
+using WinRT;
+using WinRT.Interop;
 
 namespace TranslatorApp.Pages
 {
@@ -85,6 +93,9 @@ namespace TranslatorApp.Pages
 
         private void LoadApiOptions()
         {
+            if (CbApi == null) return;
+
+            CbApi.Items.Clear();
             CbApi.Items.Add(new ComboBoxItem { Content = "Bing", Tag = "Bing" });
             CbApi.Items.Add(new ComboBoxItem { Content = "百度", Tag = "Baidu" });
             CbApi.Items.Add(new ComboBoxItem { Content = "有道", Tag = "Youdao" });
@@ -94,37 +105,37 @@ namespace TranslatorApp.Pages
             {
                 foreach (ComboBoxItem item in CbApi.Items)
                 {
-                    if ((item.Tag?.ToString() ?? "") == lastApi)
+                    if ((item.Tag as string) == lastApi)
                     {
                         CbApi.SelectedItem = item;
                         break;
                     }
                 }
             }
+
             if (CbApi.SelectedItem == null)
                 CbApi.SelectedIndex = 0;
 
             CbApi.SelectionChanged += (s, e) =>
             {
-                SettingsService.LastUsedApi = (CbApi.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+                if (CbApi.SelectedItem is ComboBoxItem selected)
+                    SettingsService.LastUsedApi = selected.Tag as string ?? "Bing";
             };
         }
 
         private void BtnSwapLang_Click(object sender, RoutedEventArgs e)
         {
-            // 交换语言
             var inIndex = CbFromLang.SelectedIndex;
             var outIndex = CbToLang.SelectedIndex;
             CbFromLang.SelectedIndex = outIndex;
             CbToLang.SelectedIndex = inIndex;
 
-            // 播放旋转动画
             var rotate = new DoubleAnimation
             {
-                To = 180,
-                Duration = new Duration(TimeSpan.FromMilliseconds(300)),
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
-                AutoReverse = true
+                From = 0,
+                To = 360,
+                Duration = new Duration(TimeSpan.FromMilliseconds(400)),
+                EasingFunction = new CircleEase { EasingMode = EasingMode.EaseOut }
             };
             Storyboard.SetTarget(rotate, SwapRotate);
             Storyboard.SetTargetProperty(rotate, "Angle");
@@ -136,7 +147,7 @@ namespace TranslatorApp.Pages
 
         private void TbInput_TextChanged(object sender, TextChangedEventArgs e)
         {
-            BtnTranslate.IsEnabled = !string.IsNullOrWhiteSpace(TbInput.Text); // 有内容才可点
+            BtnTranslate.IsEnabled = !string.IsNullOrWhiteSpace(TbInput.Text);
             if (string.IsNullOrWhiteSpace(TbInput.Text))
             {
                 TbOutput.Text = string.Empty;
@@ -145,7 +156,6 @@ namespace TranslatorApp.Pages
 
         private async void ShowToast(string message)
         {
-            // 如果当前是打开的，先播放滑出动画
             if (TopInfoBar.IsOpen)
             {
                 var tcs = new TaskCompletionSource<bool>();
@@ -168,17 +178,13 @@ namespace TranslatorApp.Pages
                 };
                 sbOut.Begin();
 
-                await tcs.Task; // 等待滑出动画完成
-                await Task.Delay(50); // 缓冲一点时间
+                await tcs.Task;
+                await Task.Delay(50);
             }
 
-            // 更新内容
             TopInfoBar.Message = message;
-
-            // 打开 InfoBar
             TopInfoBar.IsOpen = true;
 
-            // 播放滑入动画
             var slideIn = new DoubleAnimation
             {
                 To = 0,
@@ -192,7 +198,6 @@ namespace TranslatorApp.Pages
             sbIn.Children.Add(slideIn);
             sbIn.Begin();
 
-            // 重置定时器
             _infoTimer?.Stop();
             _infoTimer?.Start();
         }
@@ -286,7 +291,7 @@ namespace TranslatorApp.Pages
                 var r = await dlg.ShowAsync();
                 if (r == ContentDialogResult.Primary)
                 {
-                    await Task.Delay(200); // 延时避免两个对话框贴一起
+                    await Task.Delay(200);
                     Frame.Navigate(typeof(SettingsPage));
                 }
                 return;
@@ -311,11 +316,11 @@ namespace TranslatorApp.Pages
             try
             {
                 var result = await TranslationService.TranslateAsync(
-    provider: api,
-    text: text,
-    from: sourceLang,
-    to: targetLang,
-    cancellationToken: _cts.Token);
+                    provider: api,
+                    text: text,
+                    from: sourceLang,
+                    to: targetLang,
+                    cancellationToken: _cts.Token);
 
                 TbOutput.Text = result;
             }
@@ -347,6 +352,7 @@ namespace TranslatorApp.Pages
                 _cts = null;
             }
         }
+
         private SpeechRecognizer? _continuousRecognizer;
         private bool _isListening = false;
         private bool _isMicBusy = false; // 防抖锁
@@ -384,10 +390,10 @@ namespace TranslatorApp.Pages
 
                     _continuousRecognizer.ContinuousRecognitionSession.ResultGenerated += (s, args) =>
                     {
-                        var text = args.Result.Text;
+                        var recognized = args.Result.Text;
                         DispatcherQueue.TryEnqueue(() =>
                         {
-                            TbInput.Text = text;
+                            TbInput.Text = recognized;
                         });
                     };
 
@@ -437,6 +443,81 @@ namespace TranslatorApp.Pages
             TbInput.IsEnabled = !isBusy;
 
             BtnTranslate.Content = isBusy ? $"翻译中…（{apiLabel}）" : "翻译";
+        }
+
+        // ====== Win2D 截图 + OCR ======
+        private async Task<SoftwareBitmap?> CaptureScreenAsync()
+        {
+            var picker = new GraphicsCapturePicker();
+            InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.MainWindow));
+            var item = await picker.PickSingleItemAsync();
+            if (item == null) return null;
+
+            // 用 Win2D 获取共享设备并转成 WinRT IDirect3DDevice
+            var canvasDevice = CanvasDevice.GetSharedDevice();
+            var d3dDevice = canvasDevice.As<IDirect3DDevice>();
+
+            using var framePool = Direct3D11CaptureFramePool.Create(
+                d3dDevice,
+                DirectXPixelFormat.B8G8R8A8UIntNormalized,
+                1,
+                item.Size);
+            using var session = framePool.CreateCaptureSession(item);
+
+            var tcs = new TaskCompletionSource<SoftwareBitmap?>();
+
+            framePool.FrameArrived += (s, e) =>
+            {
+                using var frame = s.TryGetNextFrame();
+                var bitmap = SoftwareBitmap.CreateCopyFromSurfaceAsync(frame.Surface).AsTask().Result;
+                tcs.TrySetResult(bitmap);
+                session.Dispose();
+                framePool.Dispose();
+            };
+
+            session.StartCapture();
+            return await tcs.Task;
+        }
+
+        private async Task<string> RunOcrAsync(SoftwareBitmap bitmap)
+        {
+            var engine = OcrEngine.TryCreateFromLanguage(new Language("zh-CN"))
+                         ?? OcrEngine.TryCreateFromUserProfileLanguages();
+
+            if (engine is null) return string.Empty;
+
+            var result = await engine.RecognizeAsync(bitmap);
+            return result?.Text ?? string.Empty;
+        }
+
+        private async void BtnOcrCapture_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var bitmap = await CaptureScreenAsync();
+                if (bitmap == null)
+                {
+                    ShowToast("未选择截图区域");
+                    return;
+                }
+
+                var text = await RunOcrAsync(bitmap);
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    TbInput.Text = text;
+                    BtnTranslate.IsEnabled = true;
+                    ShowToast("OCR识别完成");
+                }
+                else
+                {
+                    ShowToast("未识别到文字");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"OCR异常: {ex}");
+                ShowToast("OCR识别出错");
+            }
         }
     }
 }
