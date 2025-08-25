@@ -7,7 +7,50 @@
     xmlns:controls="using:Microsoft.UI.Xaml.Controls"
     Title="翻译">
 
-    <Grid>
+    <Grid x:Name="RootGrid">
+        <Grid.Resources>
+            <!-- 欢迎弹窗用的折叠卡模板 -->
+            <DataTemplate x:Key="WelcomeApiExpanderTemplate">
+                <controls:Expander IsExpanded="False"
+                           HorizontalAlignment="Stretch"
+                           HorizontalContentAlignment="Left"
+                           MinHeight="80">
+                    <controls:Expander.Header>
+                        <Grid HorizontalAlignment="Stretch">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <FontIcon Glyph="&#xE946;"
+                              FontSize="20"
+                              Margin="0,0,12,0"/>
+
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="如何获取 API 密钥"
+                                   FontSize="16"
+                                   FontWeight="Bold"/>
+                                <TextBlock Text="点击链接前往相关网站注册"
+                                   FontSize="12"
+                                   Foreground="Gray"/>
+                            </StackPanel>
+                        </Grid>
+                    </controls:Expander.Header>
+
+                    <StackPanel Orientation="Horizontal"
+                        Spacing="12"
+                        Margin="0,8,0,0">
+                        <HyperlinkButton Content="Bing 翻译 API"
+                                 NavigateUri="https://www.microsoft.com/en-us/translator/business/translator-api/"/>
+                        <HyperlinkButton Content="百度翻译 API"
+                                 NavigateUri="https://api.fanyi.baidu.com/"/>
+                        <HyperlinkButton Content="有道翻译 API"
+                                 NavigateUri="https://ai.youdao.com/"/>
+                    </StackPanel>
+                </controls:Expander>
+            </DataTemplate>
+        </Grid.Resources>
+
         <!-- 自定义标题栏 -->
         <Grid x:Name="CustomDragRegion"
               Height="48"
