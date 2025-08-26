@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+	<data name="ReleaseNotes" xml:space="preserve">
+    <value>What's New:
+1. Added speech recognition feature
+2. Added OCR screenshot feature
+3. Improved translation engine for higher accuracy
+4. Fixed known bugs and improved stability</value>
+    <comment>Localized package description for ms-resource:ReleaseNotes</comment>
+  </data>
+
+	<data name="AppDisplayName" xml:space="preserve">
+    <value>Translator</value>
+    <comment>Application display name (English)</comment>
+  </data>
+</root>

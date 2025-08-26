@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using TranslatorApp.Pages;
 using TranslatorApp.Services;
 using Windows.ApplicationModel;
+using Windows.ApplicationModel.Resources;
 using Windows.Storage;
 using Windows.System;
 using Windows.UI.ViewManagement;
@@ -321,20 +322,25 @@ namespace TranslatorApp
             return result;
         }
 
-        private async Task<string> LoadWhatsNewTextAsync()
+        private Task<string> LoadWhatsNewTextAsync()
         {
             try
             {
-                // 优先从 Assets/WhatsNew.md 读取（可用 Markdown/纯文本）
-                var file = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Assets/WhatsNew.md"));
-                var text = await FileIO.ReadTextAsync(file);
-                return string.IsNullOrWhiteSpace(text) ? "暂无更新说明。" : text;
+                var loader = new ResourceLoader();
+                // 从 Resources.resw 中读取 ReleaseNotes 键
+                string notes = loader.GetString("ReleaseNotes");
+
+                if (!string.IsNullOrWhiteSpace(notes))
+                    return Task.FromResult(notes);
+
+                return Task.FromResult("暂无发行说明");
             }
             catch
             {
-                return "• 新增：截图 OCR 与语音输入\n• 优化：界面体验与稳定性\n• 修复：若干已知问题";
+                return Task.FromResult("暂无发行说明");
             }
         }
+
 
         private void InsertWhatsNewNavItem()
         {

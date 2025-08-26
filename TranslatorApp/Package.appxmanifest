@@ -11,12 +11,12 @@
   <Identity
     Name="com.FurryXiyi.Translate"
     Publisher="CN=Furry_Xiyi"
-    Version="1.0.0.0" />
+    Version="1.1.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="ee0e70bd-4d93-4c71-a32d-37de2ed9e2be" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>翻译</DisplayName>
+    <DisplayName>ms-resource:AppDisplayName</DisplayName>
     <PublisherDisplayName>Furry_Xiyi</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -35,8 +35,8 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="Translate"
-        Description="TranslatorApp"
+        DisplayName="ms-resource:AppDisplayName"
+        Description="ms-resource:ReleaseNotes"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
