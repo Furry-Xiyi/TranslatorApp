@@ -100,4 +100,7 @@
   <ItemGroup>
     <PRIResource Remove="Converters111\**" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Remove="Assets\WhatsNew.md" />
+  </ItemGroup>
 </Project>
