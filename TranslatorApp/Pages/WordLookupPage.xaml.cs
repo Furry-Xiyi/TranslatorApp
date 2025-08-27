@@ -1,8 +1,10 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using TranslatorApp.Services;
 
@@ -14,8 +16,6 @@ namespace TranslatorApp.Pages
         private ComboBox _cbSite;
         private AutoSuggestBox _searchBox;
         private List<string> _history = new();
-
-        private const string DefaultArticleUrl = "https://www.ef.com.cn/english-resources/english-vocabulary/";
 
         public WordLookupPage()
         {
@@ -47,7 +47,7 @@ namespace TranslatorApp.Pages
             }
             var suggestions = new List<string>();
             suggestions.AddRange(_history.FindAll(h => h.StartsWith(text, StringComparison.OrdinalIgnoreCase)));
-            suggestions.AddRange(new[] { text, $"{text} meaning", $"{text} ����", $"{text} �÷�" });
+            suggestions.AddRange(new[] { text, $"{text} meaning", $"{text} 翻译", $"{text} 用法" });
             sender.ItemsSource = suggestions;
         }
 
@@ -92,6 +92,10 @@ namespace TranslatorApp.Pages
             base.OnNavigatedTo(e);
             LoadHistory();
 
+            // 订阅每日一句更新事件
+            var app = (App)Application.Current;
+            app.DailySentenceUpdated += OnDailySentenceUpdated;
+
             if (App.MainWindow != null)
             {
                 var centerPanel = new StackPanel
@@ -129,7 +133,7 @@ namespace TranslatorApp.Pages
                 _searchBox = new AutoSuggestBox
                 {
                     Width = 400,
-                    PlaceholderText = "����Ҫ��Ĵʻ�...",
+                    PlaceholderText = "输入要查的词汇...",
                     QueryIcon = new SymbolIcon(Symbol.Find)
                 };
                 _searchBox.TextChanged += SearchBox_TextChanged;
@@ -149,6 +153,10 @@ namespace TranslatorApp.Pages
         {
             base.OnNavigatedFrom(e);
             App.MainWindow?.TitleBarCenterPanel.Children.Clear();
+
+            // 取消订阅每日一句更新事件
+            var app = (App)Application.Current;
+            app.DailySentenceUpdated -= OnDailySentenceUpdated;
         }
 
         private async void InitializeStartupNavigation(object navParam)
@@ -165,11 +173,28 @@ namespace TranslatorApp.Pages
             }
             else
             {
-                Web.Source = new Uri(DefaultArticleUrl);
+                if (!string.IsNullOrEmpty(App.DailySentenceHtml))
+                {
+                    Web.NavigateToString(App.DailySentenceHtml);
+                }
+                else
+                {
+                    Web.NavigateToString("<html><body><h2>Loading...</h2></body></html>");
+                }
                 await WaitForNextNavigationAsync();
             }
 
             Web.Opacity = 1;
+        }
+
+        // 每日一句更新事件回调
+        private async void OnDailySentenceUpdated()
+        {
+            if (Web.CoreWebView2 == null)
+            {
+                await Web.EnsureCoreWebView2Async();
+            }
+            Web.NavigateToString(App.DailySentenceHtml);
         }
 
         private async Task EnsureWebReadyAsync()
@@ -177,7 +202,6 @@ namespace TranslatorApp.Pages
             try
             {
                 await Web.EnsureCoreWebView2Async();
-                // ֱ�ӵ���ȫ�ֳ�ʼ���߼�
                 await App.InitWebView2Async(Web.CoreWebView2);
             }
             catch { }
