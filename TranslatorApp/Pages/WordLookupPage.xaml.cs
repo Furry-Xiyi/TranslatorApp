@@ -1,8 +1,10 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using TranslatorApp.Services;
 
@@ -15,6 +17,7 @@ namespace TranslatorApp.Pages
         private AutoSuggestBox _searchBox;
         private List<string> _history = new();
 
+        // 原默认地址已弃用，这里备用但不会直接用
         private const string DefaultArticleUrl = "https://www.ef.com.cn/english-resources/english-vocabulary/";
 
         public WordLookupPage()
@@ -47,7 +50,7 @@ namespace TranslatorApp.Pages
             }
             var suggestions = new List<string>();
             suggestions.AddRange(_history.FindAll(h => h.StartsWith(text, StringComparison.OrdinalIgnoreCase)));
-            suggestions.AddRange(new[] { text, $"{text} meaning", $"{text} ����", $"{text} �÷�" });
+            suggestions.AddRange(new[] { text, $"{text} meaning", $"{text} 翻译", $"{text} 用法" });
             sender.ItemsSource = suggestions;
         }
 
@@ -129,7 +132,7 @@ namespace TranslatorApp.Pages
                 _searchBox = new AutoSuggestBox
                 {
                     Width = 400,
-                    PlaceholderText = "����Ҫ��Ĵʻ�...",
+                    PlaceholderText = "输入要查的词汇...",
                     QueryIcon = new SymbolIcon(Symbol.Find)
                 };
                 _searchBox.TextChanged += SearchBox_TextChanged;
@@ -165,7 +168,7 @@ namespace TranslatorApp.Pages
             }
             else
             {
-                Web.Source = new Uri(DefaultArticleUrl);
+                await ShowDailySentenceFromIciba(); // 启动时直接加载金山每日一句
                 await WaitForNextNavigationAsync();
             }
 
@@ -177,7 +180,6 @@ namespace TranslatorApp.Pages
             try
             {
                 await Web.EnsureCoreWebView2Async();
-                // ֱ�ӵ���ȫ�ֳ�ʼ���߼�
                 await App.InitWebView2Async(Web.CoreWebView2);
             }
             catch { }
@@ -193,6 +195,49 @@ namespace TranslatorApp.Pages
             }
             Web.NavigationCompleted += Handler;
             await Task.WhenAny(tcs.Task, Task.Delay(4000));
+        }
+
+        // ===== 每日一句（金山词霸中英版） =====
+        private async Task ShowDailySentenceFromIciba()
+        {
+            try
+            {
+                using var client = new HttpClient();
+                var json = await client.GetStringAsync("http://open.iciba.com/dsapi/");
+                using var doc = JsonDocument.Parse(json);
+
+                var en = doc.RootElement.GetProperty("content").GetString();
+                var zh = doc.RootElement.GetProperty("note").GetString();
+                var pic = doc.RootElement.TryGetProperty("picture2", out var p) ? p.GetString() : "";
+
+                bool isDark = Application.Current.RequestedTheme == ApplicationTheme.Dark;
+                var bgColor = isDark ? "#1e1e1e" : "#f9f9f9";
+                var textColor = isDark ? "#f0f0f0" : "#333";
+                var subTextColor = isDark ? "#ccc" : "#666";
+
+                var html = $@"
+<html>
+<head>
+<meta charset='utf-8'/>
+<style>
+body {{ font-family: 'Segoe UI', sans-serif; padding:20px; background-color:{bgColor}; }}
+.en {{ font-size:1.3em; color:{textColor}; margin-top:20px; }}
+.zh {{ font-size:1em; color:{subTextColor}; margin-top:10px; }}
+img {{ max-width:100%; margin-top:20px; border-radius:8px; }}
+</style>
+</head>
+<body>
+<div class='en'>{en}</div>
+<div class='zh'>{zh}</div>
+{(string.IsNullOrEmpty(pic) ? "" : $"<img src='{pic}' />")}
+</body>
+</html>";
+                Web.NavigateToString(html);
+            }
+            catch
+            {
+                Web.NavigateToString("<html><body><h2>Keep learning!</h2></body></html>");
+            }
         }
     }
 }
