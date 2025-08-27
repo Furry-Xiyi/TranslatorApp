@@ -1,0 +1,49 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:TranslatorApp">
+
+    <!-- 按主题定义骨架底色 -->
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="ShimmerBackground" Color="#1FFFFFFF" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="ShimmerBackground" Color="#11000000" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="HighContrast">
+            <SolidColorBrush x:Key="ShimmerBackground" Color="{ThemeResource SystemColorWindowColor}" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+
+    <!-- 显式样式 -->
+    <Style TargetType="local:Shimmer" x:Key="DefaultShimmerStyle">
+        <Setter Property="Background" Value="{ThemeResource ShimmerBackground}" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="MinWidth" Value="40" />
+        <Setter Property="MinHeight" Value="8" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:Shimmer">
+                    <Grid>
+                        <!-- 底层骨架底色 -->
+                        <Border x:Name="Base"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="{TemplateBinding CornerRadius}" />
+                        <!-- 内容 -->
+                        <ContentPresenter />
+                        <!-- 仅作为 Composition 宿主，不再填充静态高光 -->
+                        <Border x:Name="Shape"
+                                Background="Transparent"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                IsHitTestVisible="False" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 让默认样式隐式生效 -->
+    <Style BasedOn="{StaticResource DefaultShimmerStyle}"
+           TargetType="local:Shimmer" />
+</ResourceDictionary>

@@ -1,6 +1,7 @@
 ﻿using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using System;
@@ -12,8 +13,10 @@ using TranslatorApp.Pages;
 using TranslatorApp.Services;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Resources;
+using Windows.Graphics;
 using Windows.Storage;
 using Windows.System;
+using Windows.Foundation;
 using Windows.UI.ViewManagement;
 
 namespace TranslatorApp
@@ -23,18 +26,25 @@ namespace TranslatorApp
         private bool _activatedOnce = false;
         private bool _welcomeShown = false;
         private readonly AppWindow? _appWindow;
+        // 新增：双面板引用与收藏页搜索框
+        private FrameworkElement? _lookupTitleBarContent;
+        private FrameworkElement? _favoritesTitleBarContent;
 
-        // 本地设置键
+        public AutoSuggestBox? FavoritesSearchBox { get; private set; }
+        private FrameworkElement? _titleBarContent;
+        private bool _pendingDragUpdate = false;
         private const string Key_WhatsNewShownVersion = "WhatsNewShownVersion";
         private const string Key_UpdateIgnoreVersion = "UpdateIgnoreVersion";
 
-        // 你的 GitHub 仓库（用于检查最新版本）
-        // TODO: 替换为你的真实仓库。例如 owner = "yourname", repo = "TranslatorApp"
         private const string GitHubOwner = "Furry-Xiyi";
         private const string GitHubRepo = "TranslatorApp";
 
         public Panel TitleBarCenterPanel => TitleBarCenterHost;
 
+        // 持久化查词控件
+        public ComboBox? LookupSiteComboBox { get; private set; }
+        public AutoSuggestBox? LookupSearchBox { get; private set; }
+        public interface IHasTitleBarControls { }
         public MainWindow()
         {
             InitializeComponent();
@@ -60,7 +70,6 @@ namespace TranslatorApp
                 _appWindow.Changed += AppWindow_Changed;
             }
 
-            // 按钮前景色跟随系统强调色
             var uiSettings = new UISettings();
             uiSettings.ColorValuesChanged += (s, e) =>
             {
@@ -74,17 +83,160 @@ namespace TranslatorApp
                 });
             };
 
-            SizeChanged += (_, __) => UpdateDragRegionPadding();
-            TryLoadAppIcon();
+            SizeChanged += (_, __) =>
+            {
+                UpdateDragRegionPadding();
+                UpdateTitleBarDragRegions();
+            };
 
-            // 在设置项上方插入“更新内容”按钮（礼炮图标）
+            TryLoadAppIcon();
             InsertWhatsNewNavItem();
 
-            NavView.SelectedItem = Nav_Online;
-            NavigateTo(typeof(OnlineTranslatePage));
-
             ContentFrame.Navigated += ContentFrame_Navigated;
+
+            RootGrid.Loaded += (_, __) =>
+            {
+                TryAttachTitleBarForCurrentPage();
+            };
+
+            NavView.SelectedItem = Nav_Online;
+            NavigateTo(typeof(WordLookupPage));
+
             Activated += MainWindow_Activated;
+        }
+        private void TryAttachTitleBarForCurrentPage()
+        {
+            if (_appWindow == null || RootGrid?.XamlRoot == null)
+                return;
+
+            FrameworkElement? targetContent = null;
+
+            if (ContentFrame.Content is Pages.WordLookupPage)
+            {
+                EnsureTitleBarControls();
+                targetContent = _lookupTitleBarContent as FrameworkElement ?? _titleBarContent;
+            }
+            else if (ContentFrame.Content is Pages.FavoritesPage)
+            {
+                EnsureFavoritesTitleBarControls();
+                targetContent = _favoritesTitleBarContent as FrameworkElement;
+            }
+
+            // 先把旧 content 的事件解绑
+            if (_titleBarContent != null)
+            {
+                _titleBarContent.SizeChanged -= TitleBarContent_SizeChanged;
+                _titleBarContent.LayoutUpdated -= TitleBarContent_LayoutUpdated;
+            }
+            if (RootGrid?.XamlRoot != null)
+            {
+                RootGrid.XamlRoot.Changed -= XamlRoot_Changed;
+            }
+
+            if (targetContent != null)
+            {
+                if (_lookupTitleBarContent != null && _lookupTitleBarContent != targetContent)
+                    _lookupTitleBarContent.Visibility = Visibility.Collapsed;
+                if (_favoritesTitleBarContent != null && _favoritesTitleBarContent != targetContent)
+                    _favoritesTitleBarContent.Visibility = Visibility.Collapsed;
+
+                targetContent.Visibility = Visibility.Visible;
+                _titleBarContent = targetContent;
+
+                // 绑定实例级事件处理，避免局部委托导致的解绑失败和 nullability 警告
+                _titleBarContent.SizeChanged += TitleBarContent_SizeChanged;
+                _titleBarContent.LayoutUpdated += TitleBarContent_LayoutUpdated;
+
+                if (RootGrid?.XamlRoot != null)
+                    RootGrid.XamlRoot.Changed += XamlRoot_Changed;
+
+                // 低优先级刷新，避免布局中途取值
+                RequestUpdateTitleBarDragRegions();
+            }
+            else
+            {
+                if (_titleBarContent != null)
+                    _titleBarContent.Visibility = Visibility.Collapsed;
+
+                _titleBarContent = null;
+                SetFullDragRectangles();
+            }
+        }
+        private void TitleBarContent_SizeChanged(object? sender, SizeChangedEventArgs e)
+        {
+            RequestUpdateTitleBarDragRegions();
+        }
+
+        private void TitleBarContent_LayoutUpdated(object? sender, object e)
+        {
+            RequestUpdateTitleBarDragRegions();
+        }
+
+        private void XamlRoot_Changed(XamlRoot sender, XamlRootChangedEventArgs args)
+        {
+            RequestUpdateTitleBarDragRegions();
+        }
+        private void RequestUpdateTitleBarDragRegions()
+        {
+            DispatcherQueue.TryEnqueue(
+                Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                UpdateTitleBarDragRegions);
+        }
+        public void SetTitleBarDragExclusion(FrameworkElement exclude)
+        {
+            if (_appWindow == null || exclude == null) return;
+            if (exclude.XamlRoot?.Content == null) return;
+
+            var titleBar = _appWindow.TitleBar;
+            if (titleBar == null) return;
+
+            try
+            {
+                double scale = exclude.XamlRoot.RasterizationScale;
+                double widthDip = Bounds.Width;
+                int heightPx = titleBar.Height;
+                if (widthDip <= 0 || heightPx <= 0) return;
+
+                GeneralTransform t = exclude.TransformToVisual(null);
+                Point origin = t.TransformPoint(new Point(0, 0));
+                double leftDip = Math.Max(0, origin.X);
+                double centerWidthDip = Math.Max(0, exclude.ActualWidth);
+                double rightStartDip = Math.Max(0, leftDip + centerWidthDip);
+
+                int ToPx(double v) => (int)Math.Round(v * scale);
+
+                int leftInsetPx = titleBar.LeftInset;
+                int rightInsetPx = titleBar.RightInset;
+
+                int leftX = leftInsetPx;
+                int leftW = Math.Max(0, ToPx(leftDip) - leftInsetPx);
+                int rightX = ToPx(rightStartDip);
+                int rightW = Math.Max(0, ToPx(widthDip) - rightInsetPx - rightX);
+
+                var rects = new RectInt32[]
+                {
+            new RectInt32(leftX, 0, leftW, heightPx),
+            new RectInt32(rightX, 0, rightW, heightPx)
+                };
+
+                titleBar.SetDragRectangles(rects);
+            }
+            catch (ObjectDisposedException)
+            {
+                System.Diagnostics.Debug.WriteLine("[TitleBar] Exclusion 目标已释放，跳过");
+            }
+            catch
+            {
+                // 忽略其他偶发异常
+            }
+        }
+
+        private void SafeUpdateTitleBarLayout()
+        {
+            if (TitleBarCenterPanel == null || TitleBarCenterPanel.XamlRoot == null) return;
+            if (TitleBarCenterPanel.XamlRoot.Content == null) return;
+            TitleBarCenterPanel.UpdateLayout();
+            UpdateTitleBarDragRegions();
         }
 
         public void ShowLoadingOverlay() => LoadingOverlay.Visibility = Visibility.Visible;
@@ -92,18 +244,102 @@ namespace TranslatorApp
 
         private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
         {
-            if (_appWindow is null || CustomDragRegion is null) return;
-            DispatcherQueue.TryEnqueue(UpdateDragRegionPadding);
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                SafeUpdateTitleBarLayout();
+            });
         }
 
         private void UpdateDragRegionPadding()
         {
-            if (_appWindow is null || CustomDragRegion is null) return;
+            if (_appWindow == null || CustomDragRegion == null) return;
             var tb = _appWindow.TitleBar;
             if (tb != null)
             {
                 CustomDragRegion.Padding = new Thickness(tb.LeftInset, 0, tb.RightInset, 0);
             }
+        }
+        public void UpdateTitleBarDragRegions()
+        {
+            if (_pendingDragUpdate) return;
+            _pendingDragUpdate = true;
+
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                _pendingDragUpdate = false;
+                if (_appWindow == null) return;
+
+                var tb = _appWindow.TitleBar;
+                if (tb == null) return;
+
+                // 存活检查
+                if (_titleBarContent == null ||
+                    _titleBarContent.Visibility != Visibility.Visible ||
+                    _titleBarContent.XamlRoot?.Content == null ||
+                    _titleBarContent.ActualWidth < 1)
+                {
+                    SetFullDragRectangles();
+                    return;
+                }
+
+                try
+                {
+                    double scale = _titleBarContent.XamlRoot.RasterizationScale;
+                    int windowWidthPx = (int)Math.Round(Bounds.Width * scale);
+                    int barHeightPx = tb.Height;
+                    int leftInsetPx = tb.LeftInset;
+                    int rightInsetPx = tb.RightInset;
+
+                    GeneralTransform t = _titleBarContent.TransformToVisual(null);
+                    Point origin = t.TransformPoint(new Point(0, 0));
+                    double leftDip = Math.Max(0, origin.X);
+                    double rightStartDip = Math.Max(0, leftDip + _titleBarContent.ActualWidth);
+
+                    int ToPx(double v) => (int)Math.Round(v * scale);
+                    int contentLeftPx = Math.Clamp(ToPx(leftDip), 0, windowWidthPx);
+                    int contentRightPx = Math.Clamp(ToPx(rightStartDip), 0, windowWidthPx);
+
+                    if (contentRightPx - contentLeftPx >= windowWidthPx - (leftInsetPx + rightInsetPx) - 2)
+                    {
+                        DispatcherQueue.TryEnqueue(UpdateTitleBarDragRegions);
+                        return;
+                    }
+
+                    int leftX = leftInsetPx;
+                    int leftW = Math.Max(0, contentLeftPx - leftInsetPx);
+                    int rightX = contentRightPx;
+                    int rightW = Math.Max(0, windowWidthPx - rightInsetPx - rightX);
+
+                    var rects = new System.Collections.Generic.List<RectInt32>();
+                    if (leftW > 0) rects.Add(new RectInt32(leftX, 0, leftW, barHeightPx));
+                    if (rightW > 0) rects.Add(new RectInt32(rightX, 0, rightW, barHeightPx));
+
+                    tb.SetDragRectangles(rects.ToArray());
+                }
+                catch (ObjectDisposedException)
+                {
+                    System.Diagnostics.Debug.WriteLine("[TitleBar] 元素已释放，跳过更新");
+                }
+            });
+        }
+
+        private void SetFullDragRectangles()
+        {
+            if (_appWindow == null) return;
+            var tb = _appWindow.TitleBar;
+            if (tb == null) return;
+
+            double scale = RootGrid?.XamlRoot?.RasterizationScale ?? 1.0;
+            int windowWidthPx = (int)Math.Round(Bounds.Width * scale);
+            int barHeightPx = tb.Height;
+            int leftInsetPx = tb.LeftInset;
+            int rightInsetPx = tb.RightInset;
+
+            int x = leftInsetPx;
+            int w = Math.Max(0, windowWidthPx - leftInsetPx - rightInsetPx);
+            if (w <= 0) return;
+
+            try { tb.SetDragRectangles(new[] { new RectInt32(x, 0, w, barHeightPx) }); } catch { }
         }
 
         private void TryLoadAppIcon()
@@ -127,10 +363,6 @@ namespace TranslatorApp
             if (_activatedOnce) return;
             _activatedOnce = true;
 
-            // 激活时的顺序：
-            // 1) 若需显示“更新内容”，则先显示；仅当用户点“确定”后，再显示“去填写 API”对话框
-            // 2) 若不需要显示“更新内容”，且没有 API Key，则直接显示“去填写 API”
-            // 3) 完成后，检查 GitHub 更新（若配置了仓库）
             if (ShouldShowWhatsNewForCurrentVersion())
             {
                 var result = await ShowWhatsNewDialogAsync();
@@ -149,7 +381,7 @@ namespace TranslatorApp
                 }
             }
 
-            _ = CheckForUpdatesAsync(); // 后台检查更新
+            _ = CheckForUpdatesAsync();
         }
 
         private void NavigateTo(Type pageType, object? param = null)
@@ -172,19 +404,17 @@ namespace TranslatorApp
             {
                 switch (nvi.Tag as string)
                 {
-                    case "OnlineTranslatePage":
-                        NavigateTo(typeof(OnlineTranslatePage));
-                        break;
                     case "WordLookupPage":
                         NavigateTo(typeof(WordLookupPage));
+                        break;
+                    case "OnlineTranslatePage":
+                        NavigateTo(typeof(OnlineTranslatePage));
                         break;
                     case "FavoritesPage":
                         NavigateTo(typeof(FavoritesPage));
                         break;
                     case "WhatsNew":
-                        // 弹出“更新内容”窗口（强制打开，不受是否已看过限制）
                         _ = ShowWhatsNewDialogAsync(forceOpen: true);
-                        // 还原选中到当前页面对应的菜单项
                         ReselectCurrentNavItem();
                         break;
                 }
@@ -202,19 +432,13 @@ namespace TranslatorApp
             NavView.IsBackEnabled = ContentFrame.CanGoBack;
 
             if (e.SourcePageType == typeof(SettingsPage))
-            {
                 NavView.SelectedItem = NavView.SettingsItem;
-                return;
-            }
+            else
+                NavView.SelectedItem = NavView.MenuItems
+                    .OfType<NavigationViewItem>()
+                    .FirstOrDefault(item => (string)item.Tag == e.SourcePageType.Name);
 
-            var match = NavView.MenuItems
-                .OfType<NavigationViewItem>()
-                .FirstOrDefault(item => (string)item.Tag == e.SourcePageType.Name);
-
-            if (match != null)
-            {
-                NavView.SelectedItem = match;
-            }
+            TryAttachTitleBarForCurrentPage();
         }
 
         private async Task EnsureXamlRootAsync()
@@ -247,7 +471,7 @@ namespace TranslatorApp
 
             contentPanel.Children.Add(new TextBlock
             {
-                Text = "使用翻译需要填写 API 密钥",
+                Text = "使用互译需要填写 API 密钥",
                 Opacity = 0.8,
                 TextWrapping = TextWrapping.Wrap
             });
@@ -278,8 +502,6 @@ namespace TranslatorApp
             }
         }
 
-        // ============ 新增：更新内容（What's New） ============
-
         private bool ShouldShowWhatsNewForCurrentVersion()
         {
             var current = GetCurrentVersionString();
@@ -299,7 +521,6 @@ namespace TranslatorApp
                 XamlRoot = NavView.XamlRoot,
                 Title = $"更新内容（{currentVersion}）",
                 PrimaryButtonText = "确定",
-                CloseButtonText = "稍后",
                 DefaultButton = ContentDialogButton.Primary,
                 Content = new ScrollViewer
                 {
@@ -313,7 +534,6 @@ namespace TranslatorApp
 
             var result = await dialog.ShowAsync();
 
-            // 只有用户点击“确定”才记为已读（满足你的“点了确认以后就不再弹出”）
             if (result == ContentDialogResult.Primary)
             {
                 WriteLocalSetting(Key_WhatsNewShownVersion, currentVersion);
@@ -327,7 +547,6 @@ namespace TranslatorApp
             try
             {
                 var loader = new ResourceLoader();
-                // 从 Resources.resw 中读取 ReleaseNotes 键
                 string notes = loader.GetString("ReleaseNotes");
 
                 if (!string.IsNullOrWhiteSpace(notes))
@@ -341,18 +560,15 @@ namespace TranslatorApp
             }
         }
 
-
         private void InsertWhatsNewNavItem()
         {
-            // 在 Settings 上方加入一个“更新内容”按钮（礼炮/庆祝类图标）
             var item = new NavigationViewItem
             {
                 Content = "更新内容",
                 Tag = "WhatsNew",
-                Icon = new FontIcon { Glyph = "\uE7E7" } // TODO: 可替换为你喜欢的 MDL2 Glyph（礼炮/庆祝）
+                Icon = new FontIcon { Glyph = "\uE781" }
             };
 
-            // 插入到菜单末尾（Settings 在底部，会自然位于其上方）
             NavView.FooterMenuItems.Insert(0, item);
         }
 
@@ -372,11 +588,8 @@ namespace TranslatorApp
                 NavView.SelectedItem = match;
         }
 
-        // ============ 新增：GitHub 更新检查 ============
-
         private async Task CheckForUpdatesAsync()
         {
-            // 未配置仓库则不检查
             if (string.IsNullOrWhiteSpace(GitHubOwner) || string.IsNullOrWhiteSpace(GitHubRepo) ||
                 GitHubOwner == "yourname" || GitHubRepo == "TranslatorApp")
             {
@@ -386,7 +599,7 @@ namespace TranslatorApp
             try
             {
                 using var http = new HttpClient();
-                http.DefaultRequestHeaders.UserAgent.ParseAdd("TranslatorApp-Updater"); // GitHub 需要 UA
+                http.DefaultRequestHeaders.UserAgent.ParseAdd("TranslatorApp-Updater");
 
                 var url = $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases/latest";
                 var json = await http.GetStringAsync(url);
@@ -397,12 +610,10 @@ namespace TranslatorApp
                 var tag = root.GetProperty("tag_name").GetString() ?? "";
                 var htmlUrl = root.GetProperty("html_url").GetString() ?? $"https://github.com/{GitHubOwner}/{GitHubRepo}/releases/latest";
 
-                // “暂不”忽略的版本
                 var ignored = ReadLocalSetting<string>(Key_UpdateIgnoreVersion);
                 if (!string.IsNullOrEmpty(ignored) && string.Equals(ignored, tag, StringComparison.OrdinalIgnoreCase))
                     return;
 
-                // 比较版本（tag 可能以 v 开头）
                 var latest = NormalizeVersion(tag);
                 var current = NormalizeVersion(GetCurrentVersionString());
 
@@ -413,7 +624,6 @@ namespace TranslatorApp
             }
             catch
             {
-                // 静默失败，不打扰用户
             }
         }
 
@@ -442,12 +652,9 @@ namespace TranslatorApp
             }
             else
             {
-                // 暂不：记住这个版本号，不再提示
                 WriteLocalSetting(Key_UpdateIgnoreVersion, tagName);
             }
         }
-
-        // ============ 工具方法 ============
 
         private static string GetCurrentVersionString()
         {
@@ -467,7 +674,6 @@ namespace TranslatorApp
             if (v.StartsWith("v", StringComparison.OrdinalIgnoreCase))
                 v = v[1..];
 
-            // 尝试补全到 4 段
             var parts = v.Split('.');
             while (parts.Length < 4) v += ".0";
             try
@@ -480,6 +686,125 @@ namespace TranslatorApp
             }
         }
 
+        public void EnsureTitleBarControls()
+        {
+            // 已创建：刷新并返回
+            if (_lookupTitleBarContent is FrameworkElement existing &&
+                TitleBarCenterPanel.Children.Contains(existing))
+            {
+                existing.Visibility = Visibility.Visible;
+                SafeUpdateTitleBarLayout();
+                return;
+            }
+
+            // 首次创建查词栏
+            var panel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 8,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            LookupSiteComboBox = new ComboBox { Width = 140 };
+            LookupSiteComboBox.Items.Add(new ComboBoxItem { Content = "Google", Tag = "Google" });
+            LookupSiteComboBox.Items.Add(new ComboBoxItem { Content = "Bing", Tag = "Bing" });
+            LookupSiteComboBox.Items.Add(new ComboBoxItem { Content = "Youdao", Tag = "Youdao" });
+
+            var lastSite = SettingsService.LastLookupSite;
+            foreach (ComboBoxItem item in LookupSiteComboBox.Items)
+            {
+                if ((item.Tag?.ToString() ?? "") == lastSite)
+                {
+                    LookupSiteComboBox.SelectedItem = item;
+                    break;
+                }
+            }
+            if (LookupSiteComboBox.SelectedItem == null) LookupSiteComboBox.SelectedIndex = 2;
+
+            LookupSearchBox = new AutoSuggestBox
+            {
+                Width = 600,
+                PlaceholderText = "输入要查的词汇...",
+                QueryIcon = new SymbolIcon(Symbol.Find)
+            };
+
+            panel.Children.Add(LookupSiteComboBox);
+            panel.Children.Add(LookupSearchBox);
+
+            if (!TitleBarCenterPanel.Children.Contains(panel))
+                TitleBarCenterPanel.Children.Add(panel);
+
+            _lookupTitleBarContent = panel;
+            SafeUpdateTitleBarLayout();
+        }
+        private void EnsureFavoritesTitleBarControls()
+        {
+            if (_favoritesTitleBarContent is FrameworkElement existing &&
+                TitleBarCenterPanel.Children.Contains(existing))
+            {
+                existing.Visibility = Visibility.Visible;
+                SafeUpdateTitleBarLayout();
+                return;
+            }
+
+            var panel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 8,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            FavoritesSearchBox = new AutoSuggestBox
+            {
+                Width = 600,
+                PlaceholderText = "搜索收藏的词汇",
+                QueryIcon = new SymbolIcon(Symbol.Find)
+            };
+
+            // 事件绑定：转发到当前收藏页实例
+            FavoritesSearchBox.TextChanged += FavoritesSearchBox_TextChanged;
+            FavoritesSearchBox.QuerySubmitted += FavoritesSearchBox_QuerySubmitted;
+
+            panel.Children.Add(FavoritesSearchBox);
+
+            if (!TitleBarCenterPanel.Children.Contains(panel))
+                TitleBarCenterPanel.Children.Add(panel);
+
+            _favoritesTitleBarContent = panel;
+            SafeUpdateTitleBarLayout();
+        }
+        private void FavoritesSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+        {
+            if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput) return;
+            if (ContentFrame.Content is Pages.FavoritesPage favPage)
+            {
+                favPage.OnFavoritesSearchTextChanged(sender.Text);
+            }
+        }
+
+        private void FavoritesSearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+        {
+            if (ContentFrame.Content is Pages.FavoritesPage favPage)
+            {
+                var text = args.QueryText ?? sender.Text;
+                favPage.OnFavoritesSearchQuerySubmitted(text);
+            }
+        }
+        public void SetTitleBarContent(UIElement? content)
+        {
+            TitleBarCenterPanel.Children.Clear();
+            if (content != null)
+            {
+                TitleBarCenterPanel.Children.Add(content);
+                TitleBarCenterPanel.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                TitleBarCenterPanel.Visibility = Visibility.Collapsed;
+            }
+        }
         private static T? ReadLocalSetting<T>(string key)
         {
             var values = ApplicationData.Current.LocalSettings.Values;

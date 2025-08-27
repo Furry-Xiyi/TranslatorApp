@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using TranslatorApp.Pages;
 using Windows.Storage;
 using Windows.Storage.Streams;
+using static TranslatorApp.Pages.WordLookupPage;
 
 namespace TranslatorApp
 {
@@ -104,117 +105,67 @@ namespace TranslatorApp
             MainWindow.Closed += (s, e) => { isClosing = true; };
         }
 
+        public DailySentenceData? CachedDailySentence { get; set; }
         public event Action? DailySentenceUpdated;
 
         public async Task PreloadDailySentence()
         {
             try
             {
-                // 显示加载动画
-                DailySentenceHtml = @"
-<html>
-<head>
-<meta charset='utf-8'/>
-<meta name='color-scheme' content='light dark'/>
-<style>
-body { font-family: 'Segoe UI', sans-serif; display:flex;align-items:center;justify-content:center;
-       height:100vh; background-color:transparent; color:gray; margin:0; }
-.spinner {
-  border: 4px solid rgba(0,0,0,0.1);
-  width: 36px; height: 36px;
-  border-radius: 50%;
-  border-left-color: #09f;
-  animation: spin 1s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-</style>
-</head>
-<body>
-<div class='spinner'></div>
-</body>
-</html>";
-                DailySentenceUpdated?.Invoke();
-
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
-                var json = await _http.GetStringAsync("https://open.iciba.com/dsapi/", cts.Token);
+                string json = await _http.GetStringAsync("https://open.iciba.com/dsapi/", cts.Token);
+
                 using var doc = JsonDocument.Parse(json);
+                string val(string prop) =>
+                    doc.RootElement.TryGetProperty(prop, out var el) ? (el.GetString() ?? "") : "";
 
-                // 编码工具
-                string enc(string s) => System.Net.WebUtility.HtmlEncode(s ?? "");
-                string encAttr(string s) => Uri.EscapeUriString(s ?? "");
+                var data = new DailySentenceData
+                {
+                    Caption = val("caption"),
+                    Date = val("dateline"),
+                    En = val("content"),
+                    Zh = val("note"),
+                    TtsUrl = val("tts"),
+                    PicUrl = val("picture2").Length > 0 ? val("picture2") :
+                             val("picture").Length > 0 ? val("picture") : ""
+                };
 
-                var en = enc(doc.RootElement.GetProperty("content").GetString());
-                var zh = enc(doc.RootElement.GetProperty("note").GetString());
-                var caption = enc(doc.RootElement.TryGetProperty("caption", out var cap) ? cap.GetString() : "");
-                var date = enc(doc.RootElement.TryGetProperty("dateline", out var dl) ? dl.GetString() : "");
-                var tts = encAttr(doc.RootElement.TryGetProperty("tts", out var t) ? t.GetString() ?? "" : "");
-
-                var picUrl = encAttr(
-                    (doc.RootElement.TryGetProperty("picture2", out var p2) ? p2.GetString() : null)
-                    ?? (doc.RootElement.TryGetProperty("picture", out var p1) ? p1.GetString() : null)
-                    ?? ""
-                );
-
-                bool isDark = Current.RequestedTheme == ApplicationTheme.Dark;
-                var bgColor = isDark ? "#1e1e1e" : "#f9f9f9";
-                var textColor = isDark ? "#f0f0f0" : "#333";
-                var subTextColor = isDark ? "#ccc" : "#666";
-
-                var ttsHtml = string.IsNullOrWhiteSpace(tts) ? "" :
-                    $"<audio controls style='margin-top:12px; width:100%'><source src='{tts}' type='audio/mpeg'></audio>";
-
-                var imgHtml = string.IsNullOrWhiteSpace(picUrl) ? "" :
-                    $"<img src='{picUrl}' />";
-
-                DailySentenceHtml = $@"
-<html>
-<head>
-<meta charset='utf-8'/>
-<meta name='color-scheme' content='{(isDark ? "dark" : "light")}'/>
-<style>
-body {{ font-family: 'Segoe UI', sans-serif; padding:20px; background-color:{bgColor}; margin:0; }}
-.header {{ color:{subTextColor}; font-size:0.9em; }}
-.en {{ font-size:1.3em; color:{textColor}; margin-top:14px; line-height:1.6; }}
-.zh {{ font-size:1em; color:{subTextColor}; margin-top:8px; }}
-img {{ max-width:100%; margin-top:16px; border-radius:8px; }}
-audio {{ outline:none; }}
-</style>
-</head>
-<body>
-<div class='header'>{caption} {date}</div>
-<div class='en'>{en}</div>
-<div class='zh'>{zh}</div>
-{imgHtml}
-{ttsHtml}
-</body>
-</html>";
-
-                DailySentenceUpdated?.Invoke();
-
-                // 内嵌 Base64 图片
-                if (!string.IsNullOrWhiteSpace(picUrl) && Uri.IsWellFormedUriString(picUrl, UriKind.Absolute))
+                // 如果有图片 URL，先下载并转成 Base64
+                if (!string.IsNullOrWhiteSpace(data.PicUrl) &&
+                    Uri.IsWellFormedUriString(data.PicUrl, UriKind.Absolute))
                 {
                     try
                     {
                         using var ctsImg = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                        var bytes = await _http.GetByteArrayAsync(picUrl, ctsImg.Token);
-                        if (bytes?.Length > 0)
+                        byte[] bytes = await _http.GetByteArrayAsync(data.PicUrl, ctsImg.Token);
+
+                        if (bytes.Length > 0)
                         {
-                            var ext = picUrl.ToLowerInvariant().EndsWith(".png") ? "image/png" :
-                                      picUrl.ToLowerInvariant().EndsWith(".webp") ? "image/webp" :
+                            var ext = data.PicUrl.ToLowerInvariant().EndsWith(".png") ? "image/png" :
+                                      data.PicUrl.ToLowerInvariant().EndsWith(".webp") ? "image/webp" :
                                       "image/jpeg";
-                            var b64 = Convert.ToBase64String(bytes);
-                            var base64ImgHtml = $"<img src='data:{ext};base64,{b64}' />";
-                            DailySentenceHtml = DailySentenceHtml.Replace(imgHtml, base64ImgHtml);
-                            DailySentenceUpdated?.Invoke();
+
+                            data.PicUrl = $"data:{ext};base64,{Convert.ToBase64String(bytes)}";
                         }
                     }
-                    catch (TaskCanceledException) { }
+                    catch { /* 图片下载失败就保留原 URL 或置空 */ }
                 }
+
+                // 一次性更新，避免闪烁
+                CachedDailySentence = data;
+                DailySentenceUpdated?.Invoke();
             }
             catch
             {
-                DailySentenceHtml = "<html><body><h2>每日一句暂不可用</h2></body></html>";
+                CachedDailySentence = new DailySentenceData
+                {
+                    Caption = "",
+                    Date = "",
+                    En = "每日一句暂不可用",
+                    Zh = "",
+                    PicUrl = "",
+                    TtsUrl = ""
+                };
                 DailySentenceUpdated?.Invoke();
             }
         }
@@ -260,6 +211,7 @@ audio {{ outline:none; }}
             core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.Document);
             core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.Stylesheet);
 
+            // 有道 HTML 注入
             core.WebResourceRequested += async (s, e) =>
             {
                 if (isClosing || core?.Environment == null || e.ResourceContext != CoreWebView2WebResourceContext.Document) return;
@@ -284,9 +236,14 @@ audio {{ outline:none; }}
                         if (closeHeadTag > 0)
                         {
                             bool isDark = MainWindow?.Content is FrameworkElement fe && fe.ActualTheme == ElementTheme.Dark;
-                            string styleTag = isDark
-                                ? $"<style>{HideCssRules}{YoudaoDarkCss}</style>"
-                                : $"<style>{HideCssRules}</style>";
+                            string extraDarkCss = isDark
+                                ? @":root{color-scheme:dark;}
+                           html,body{background:#0f0f0f!important;color:#ddd!important;}
+                           a{color:#6fb1ff!important;}
+                           .trans-container,.dict-module{background-color:#1e1e1e!important;color:#ddd!important;}"
+                                : "";
+
+                            string styleTag = $"<style>{HideCssRules}{extraDarkCss}[id*='feedback'],[class*='feedback']{{display:none!important;pointer-events:none!important;}}</style>";
                             html = html.Insert(closeHeadTag + 1, styleTag);
                         }
                     }
@@ -305,6 +262,7 @@ audio {{ outline:none; }}
                 finally { deferral.Complete(); }
             };
 
+            // 有道 CSS 注入
             core.WebResourceRequested += async (s, e) =>
             {
                 if (isClosing || core?.Environment == null || e.ResourceContext != CoreWebView2WebResourceContext.Stylesheet) return;
@@ -322,7 +280,9 @@ audio {{ outline:none; }}
                     }
                     catch { deferral.Complete(); return; }
 
-                    cssText += "\n" + HideCssRules;
+                    cssText += "\n" + HideCssRules +
+                               "\n.trans-container,.dict-module{background-color:#1e1e1e!important;color:#ddd!important;}" +
+                               "\n[id*='feedback'],[class*='feedback']{display:none!important;pointer-events:none!important;}";
 
                     var ras = new InMemoryRandomAccessStream();
                     var writer = new DataWriter(ras)
@@ -468,6 +428,7 @@ audio {{ outline:none; }}
                     catch { }
                 };
             }
+            await Task.CompletedTask;
         }
     }
 }

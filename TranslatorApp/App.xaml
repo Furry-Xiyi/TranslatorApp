@@ -7,8 +7,9 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- 引入 WinUI 3 所有控件的默认主题资源 -->
-                <controls:XamlControlsResources/>
+                <!-- WinUI 控件默认资源 -->
+                <controls:XamlControlsResources />
+                <ResourceDictionary Source="ms-appx:///Shimmer.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
             <!-- 如果需要，可以在这里添加自定义主题资源 -->

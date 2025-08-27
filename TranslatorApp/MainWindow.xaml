@@ -100,13 +100,13 @@
 
                 <controls:NavigationView.MenuItems>
                     <controls:NavigationViewItem x:Name="Nav_Online"
-                                                 Content="在线翻译"
-                                                 Icon="Globe"
-                                                 Tag="OnlineTranslatePage"/>
-                    <controls:NavigationViewItem x:Name="Nav_Lookup"
-                                                 Content="查词翻译"
+                                                 Content="查词"
                                                  Icon="Find"
                                                  Tag="WordLookupPage"/>
+                    <controls:NavigationViewItem x:Name="Nav_Lookup"
+                                                 Content="互译"
+                                                 Icon="Globe"
+                                                 Tag="OnlineTranslatePage"/>
                     <controls:NavigationViewItem x:Name="Nav_Fav"
                                                  Content="收藏"
                                                  Icon="Favorite"

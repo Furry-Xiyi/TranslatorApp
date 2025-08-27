@@ -11,7 +11,7 @@
   <Identity
     Name="com.FurryXiyi.Translate"
     Publisher="CN=Furry_Xiyi"
-    Version="1.1.0.0" />
+    Version="1.2.1.0" />
 
   <mp:PhoneIdentity PhoneProductId="ee0e70bd-4d93-4c71-a32d-37de2ed9e2be" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

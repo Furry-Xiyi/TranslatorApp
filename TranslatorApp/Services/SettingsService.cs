@@ -89,6 +89,8 @@ namespace TranslatorApp.Services
                 Local.Values[nameof(LookupHistory)] = JsonSerializer.Serialize(value ?? new List<string>());
             }
         }
+        // 每日一句缓存（仅内存，App 生命周期内有效）
+        public static TranslatorApp.Pages.WordLookupPage.DailySentenceData? LastDailySentenceCache { get; set; }
 
         // 是否已配置任意一个 API
         public static bool HasAnyApiKey() =>

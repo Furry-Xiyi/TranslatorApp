@@ -1,11 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
 	<data name="ReleaseNotes" xml:space="preserve">
-    <value>本次更新内容：
-1. 新增语音识别功能
-2. 新增 OCR 截图功能
-3. 优化翻译引擎，提升翻译准确率
-4. 修复已知 bug，提升稳定性</value>
+    <value>新增：
+1. 查词页每日一句卡片，学习地道表达
+2. 把查词页改为新首页
+修复：
+1. 更新内容界面显示稍后按钮</value>
     <comment>用于包清单 Description 的本地化（ms-resource:ReleaseNotes）</comment>
   </data>
 

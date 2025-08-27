@@ -19,8 +19,6 @@ namespace TranslatorApp.Pages
         private enum ViewMode { List, Tile }
         private static ViewMode _currentViewMode = ViewMode.List;
 
-        private AutoSuggestBox? _searchBox;
-
         public FavoritesPage()
         {
             FavoritesService.Load();
@@ -49,37 +47,13 @@ namespace TranslatorApp.Pages
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-
-            if (App.MainWindow != null)
-            {
-                var centerPanel = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    Spacing = 8,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-
-                _searchBox = new AutoSuggestBox
-                {
-                    Width = 600,
-                    PlaceholderText = "搜索收藏的词汇",
-                    QueryIcon = new SymbolIcon(Symbol.Find)
-                };
-                _searchBox.QuerySubmitted += SearchBox_QuerySubmitted;
-                _searchBox.TextChanged += SearchBox_TextChanged;
-
-                centerPanel.Children.Add(_searchBox);
-
-                App.MainWindow.TitleBarCenterPanel.Children.Clear();
-                App.MainWindow.TitleBarCenterPanel.Children.Add(centerPanel);
-            }
+            // 标题栏完全由 MainWindow 托管，这里不再操作标题栏
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
-            App.MainWindow?.TitleBarCenterPanel.Children.Clear();
+            // 不再操作标题栏，也无需解绑标题栏事件（事件绑定在 MainWindow 上）
         }
 
         private void List_ItemClick(object sender, ItemClickEventArgs e)
@@ -175,20 +149,8 @@ namespace TranslatorApp.Pages
                 List.ItemsSource = Favorites;
         }
 
-        private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
-        {
-            ApplySearchFilter(sender.Text);
-        }
 
-        private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
-        {
-            if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
-            {
-                ApplySearchFilter(sender.Text);
-            }
-        }
-
-        private void ApplySearchFilter(string? query)
+        public void ApplySearchFilter(string? query)
         {
             if (string.IsNullOrWhiteSpace(query))
             {
@@ -203,6 +165,15 @@ namespace TranslatorApp.Pages
 
                 List.ItemsSource = new ObservableCollection<FavoriteItem>(filtered);
             }
+        }
+        public void OnFavoritesSearchTextChanged(string? text)
+        {
+            ApplySearchFilter(text);
+        }
+
+        public void OnFavoritesSearchQuerySubmitted(string? text)
+        {
+            ApplySearchFilter(text);
         }
 
         private void ShowDeleteInfoBar(string message)
