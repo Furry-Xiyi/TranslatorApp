@@ -11,7 +11,16 @@
                 <controls:XamlControlsResources />
                 <ResourceDictionary Source="ms-appx:///Shimmer.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            <Color x:Key="TitleBarButtonForegroundColorLight">#FF000000</Color>
+            <Color x:Key="TitleBarButtonForegroundColorDark">#FFFFFFFF</Color>
+            <Color x:Key="TitleBarButtonBackgroundTransparent">#00000000</Color>
+            <!-- 浅色主题下的悬停/按下背景 -->
+            <Color x:Key="TitleBarButtonHoverBackgroundLight">#33000000</Color>
+            <Color x:Key="TitleBarButtonPressedBackgroundLight">#55000000</Color>
 
+            <!-- 深色主题下的悬停/按下背景 -->
+            <Color x:Key="TitleBarButtonHoverBackgroundDark">#33FFFFFF</Color>
+            <Color x:Key="TitleBarButtonPressedBackgroundDark">#55FFFFFF</Color>
             <!-- 如果需要，可以在这里添加自定义主题资源 -->
             <!-- 例如手动覆盖 TabViewButtonBackground -->
             <!--

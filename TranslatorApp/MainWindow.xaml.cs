@@ -4,6 +4,8 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.UI;
+using Windows.UI;
 using System;
 using System.Linq;
 using System.Net.Http;
@@ -61,27 +63,31 @@ namespace TranslatorApp
                 var titleBar = _appWindow.TitleBar;
                 if (AppWindowTitleBar.IsCustomizationSupported())
                 {
-                    var transparent = Windows.UI.Color.FromArgb(0, 0, 0, 0);
+                    // 保留高按钮样式
                     titleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+
+                    // 背景透明（悬停/按下效果由系统绘制）
+                    var transparent = Windows.UI.Color.FromArgb(0, 0, 0, 0);
                     titleBar.ButtonBackgroundColor = transparent;
                     titleBar.ButtonInactiveBackgroundColor = transparent;
+
+                    // 关键：前景色和悬停/按下背景全部设为 null，让系统托管
+                    titleBar.ButtonForegroundColor = null;
+                    titleBar.ButtonHoverForegroundColor = null;
+                    titleBar.ButtonPressedForegroundColor = null;
+                    titleBar.ButtonInactiveForegroundColor = null;
+                    titleBar.ButtonHoverBackgroundColor = null;
+                    titleBar.ButtonPressedBackgroundColor = null;
                 }
+
                 UpdateDragRegionPadding();
                 _appWindow.Changed += AppWindow_Changed;
+                ApplyTitleBarColors();
+                RootGrid.ActualThemeChanged += (_, __) => ApplyTitleBarColors();
             }
 
-            var uiSettings = new UISettings();
-            uiSettings.ColorValuesChanged += (s, e) =>
-            {
-                DispatcherQueue.TryEnqueue(() =>
-                {
-                    if (_appWindow is not null)
-                    {
-                        var accent = uiSettings.GetColorValue(UIColorType.Accent);
-                        _appWindow.TitleBar.ButtonForegroundColor = accent;
-                    }
-                });
-            };
+            // 关闭时解绑事件，防止 NRE
+            this.Closed += MainWindow_Closed;
 
             SizeChanged += (_, __) =>
             {
@@ -91,18 +97,71 @@ namespace TranslatorApp
 
             TryLoadAppIcon();
             InsertWhatsNewNavItem();
-
             ContentFrame.Navigated += ContentFrame_Navigated;
-
-            RootGrid.Loaded += (_, __) =>
-            {
-                TryAttachTitleBarForCurrentPage();
-            };
-
+            RootGrid.Loaded += (_, __) => TryAttachTitleBarForCurrentPage();
             NavView.SelectedItem = Nav_Online;
             NavigateTo(typeof(WordLookupPage));
-
             Activated += MainWindow_Activated;
+        }
+        private void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+            try
+            {
+                if (_appWindow != null)
+                    _appWindow.Changed -= AppWindow_Changed;
+
+                if (RootGrid?.XamlRoot != null)
+                    RootGrid.XamlRoot.Changed -= XamlRoot_Changed;
+
+                if (_titleBarContent != null)
+                {
+                    _titleBarContent.SizeChanged -= TitleBarContent_SizeChanged;
+                    _titleBarContent.LayoutUpdated -= TitleBarContent_LayoutUpdated;
+                }
+
+                ContentFrame.Navigated -= ContentFrame_Navigated;
+
+                if (FavoritesSearchBox != null)
+                {
+                    FavoritesSearchBox.TextChanged -= FavoritesSearchBox_TextChanged;
+                    FavoritesSearchBox.QuerySubmitted -= FavoritesSearchBox_QuerySubmitted;
+                }
+            }
+            catch
+            {
+                // 防御性处理，关闭阶段的异常直接忽略
+            }
+        }
+        private void ApplyTitleBarColors()
+        {
+            if (_appWindow?.TitleBar is null) return;
+
+            var theme = RootGrid.ActualTheme;
+            var tb = _appWindow.TitleBar;
+
+            Color fg = theme == ElementTheme.Dark
+                ? (Color)Application.Current.Resources["TitleBarButtonForegroundColorDark"]
+                : (Color)Application.Current.Resources["TitleBarButtonForegroundColorLight"];
+
+            Color bgTransparent = (Color)Application.Current.Resources["TitleBarButtonBackgroundTransparent"];
+            Color hoverBg = theme == ElementTheme.Dark
+                ? (Color)Application.Current.Resources["TitleBarButtonHoverBackgroundDark"]
+                : (Color)Application.Current.Resources["TitleBarButtonHoverBackgroundLight"];
+            Color pressedBg = theme == ElementTheme.Dark
+                ? (Color)Application.Current.Resources["TitleBarButtonPressedBackgroundDark"]
+                : (Color)Application.Current.Resources["TitleBarButtonPressedBackgroundLight"];
+
+            tb.ButtonForegroundColor = fg;
+            tb.ButtonHoverForegroundColor = fg;
+            tb.ButtonPressedForegroundColor = fg;
+            tb.ButtonInactiveForegroundColor = fg;
+
+            tb.ButtonBackgroundColor = bgTransparent;
+            tb.ButtonInactiveBackgroundColor = bgTransparent;
+
+            // 恢复触摸反馈
+            tb.ButtonHoverBackgroundColor = hoverBg;
+            tb.ButtonPressedBackgroundColor = pressedBg;
         }
         private void TryAttachTitleBarForCurrentPage()
         {
